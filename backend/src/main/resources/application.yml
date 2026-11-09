@@ -1,0 +1,81 @@
+server:
+  port: 8080
+  servlet:
+    session:
+      timeout: 30m # HTTP Session dùng cho giỏ tour (Session Cart)
+      cookie:
+        http-only: true
+        same-site: lax
+
+spring:
+  application:
+    name: tourdulich-backend
+  autoconfigure:
+    # Xác thực hoàn toàn bằng JWT + bảng users, không dùng user in-memory (mật khẩu tạm) của Spring Boot
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+  datasource:
+    url: jdbc:mariadb://localhost:3306/tourdulich
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:sapassword}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Cấu trúc CSDL được quản lý bằng database/schema.sql, Hibernate không tự sinh/sửa bảng
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+    default-property-inclusion: non_null
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:5173
+  jwt:
+    # Tối thiểu 32 ký tự. PHẢI đổi qua biến môi trường JWT_SECRET khi triển khai thật.
+    secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}
+    access-expiration-ms: 1800000 # 30 phút
+    refresh-expiration-ms: 604800000 # 7 ngày
+  mail:
+    enabled: ${MAIL_ENABLED:false} # false: chỉ ghi log, không gửi mail thật
+    from: ${MAIL_FROM:no-reply@tourdulich.local}
+    admin-email: ${MAIL_ADMIN:admin@tourdulich.local}
+  seed:
+    # Tài khoản Admin được tạo tự động ở lần chạy đầu tiên nếu chưa tồn tại
+    admin-email: ${ADMIN_EMAIL:admin@tourdulich.local}
+    admin-password: ${ADMIN_PASSWORD:Admin@123}
+    admin-full-name: Quản trị viên
+    # Nếu bảng categories còn trống, tự chạy file SQL này (tương đối so với thư mục chạy; bỏ qua nếu không có file)
+    sql-path: ${SEED_SQL_PATH:../database/seed.sql}
+    # Tự tạo khách hàng/đơn đặt tour/liên hệ mẫu khi CSDL chưa có đơn nào (tắt khi triển khai thật)
+    demo-data: ${SEED_DEMO_DATA:true}
+  payment:
+    # Chuyển khoản QR (VietQR). Đổi sang tài khoản thật bằng biến môi trường.
+    bank-name: ${PAYMENT_BANK_NAME:Vietcombank}
+    bank-code: ${PAYMENT_BANK_CODE:VCB}
+    account-number: ${PAYMENT_ACCOUNT_NUMBER:0123456789}
+    account-name: ${PAYMENT_ACCOUNT_NAME:CONG TY DU LICH NHOM 22}
+    webhook-key: ${PAYMENT_WEBHOOK_KEY:dev-webhook-key-change-me}
+    # Cho phép nút "thanh toán giả lập" để demo. PHẢI đặt false khi triển khai thật.
+    simulate-enabled: ${PAYMENT_SIMULATE_ENABLED:true}
+  upload:
+    dir: ${UPLOAD_DIR:./uploads}
+
+logging:
+  level:
+    com.tourdulich: debug

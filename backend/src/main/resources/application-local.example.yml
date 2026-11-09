@@ -1,0 +1,6 @@
+# Sao chép file này thành application-local.yml (file đó đã nằm trong .gitignore)
+# rồi chạy với profile "local":  mvn spring-boot:run -Dspring-boot.run.profiles=local
+spring:
+  datasource:
+    username: root
+    password: sapassword
