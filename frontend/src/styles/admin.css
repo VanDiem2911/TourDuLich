@@ -29,7 +29,6 @@
 }
 
 /* ------------------------------ Đầu trang con ------------------------------ */
-.admin-head > div > .eyebrow { display: block; margin-bottom: var(--s1); }
 .admin-head p { margin: var(--s1) 0 0; color: var(--muted); max-width: 62ch; }
 .admin-head__actions { display: flex; gap: var(--s2); flex-wrap: wrap; }
 
@@ -264,3 +263,59 @@ a.stat:hover { border-color: var(--ink); background: var(--paper-2); color: var(
   .admin-head__actions, .admin-head__actions .btn { width: 100%; }
   .modal__actions { flex-wrap: wrap; }
 }
+
+/* Chọn khoảng thời gian thống kê (nhóm nút, aria-pressed) */
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line-strong); border-radius: var(--r); overflow: hidden; background: var(--card); }
+.seg button {
+  min-height: 40px; padding: 0 var(--s4); border: 0; border-right: 1px solid var(--line); background: transparent;
+  color: var(--ink-soft); font: 500 0.9rem var(--font-body); cursor: pointer;
+}
+.seg button:last-child { border-right: 0; }
+.seg button:hover { background: var(--paper-2); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); font-weight: 600; }
+.seg button:focus-visible { outline-offset: -3px; }
+
+/* ------------------------------ Trang Hành vi người dùng / Trợ lý AI ------------------------------ */
+.pill { display: inline-block; padding: 2px 10px; border: 1px solid var(--line-strong); border-radius: 12px; font-size: 0.82rem; color: var(--ink-soft); background: var(--paper); }
+.pill--ok { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); font-weight: 600; }
+.pill--warn { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+.pill--danger { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+
+.bars { display: flex; align-items: flex-end; gap: 6px; height: 190px; padding-top: var(--s4); border-bottom: 1px solid var(--line-strong); overflow-x: auto; }
+.bars__col { flex: 1 1 0; min-width: 18px; max-width: 56px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; position: relative; }
+.bars__bar { display: block; width: 100%; background: var(--forest); border-radius: var(--r) var(--r) 0 0; min-height: 4px; }
+.bars__val { font-size: 0.72rem; color: var(--muted); }
+.bars__col small { position: absolute; bottom: -22px; font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+.bars + * { margin-top: var(--s6); }
+
+.funnel { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s4); }
+.funnel__row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3); font-size: 0.95rem; }
+.funnel__row small { font-weight: 400; color: var(--muted); }
+.funnel__track { height: 10px; margin-top: 6px; background: var(--paper-2); border-radius: 5px; overflow: hidden; }
+.funnel__track span { display: block; height: 100%; background: var(--clay); border-radius: 5px; }
+.funnel__drop { display: block; margin-top: 4px; font-size: 0.78rem; color: var(--muted); font-style: normal; }
+
+.chips-static { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s2); }
+.chips-static li { padding: 4px 12px; border: 1px solid var(--line-strong); border-radius: 16px; background: var(--paper); font-size: 0.88rem; }
+.chips-static b { margin-left: 4px; color: var(--clay-deep); }
+
+.ai-answer { margin-top: var(--s4); }
+.ai-docs { display: grid; gap: var(--s2); max-height: 480px; overflow-y: auto; }
+.ai-docs details { border: 1px solid var(--line); border-radius: var(--r); background: var(--paper); }
+.ai-docs summary { cursor: pointer; padding: var(--s3); font: 600 0.88rem var(--font-body); min-height: 44px; display: flex; align-items: center; }
+.ai-docs pre { margin: 0; padding: var(--s3); white-space: pre-wrap; overflow-wrap: anywhere; font: 400 0.82rem/1.5 var(--font-body); border-top: 1px solid var(--line); }
+@media (prefers-reduced-motion: no-preference) { .funnel__track span { transition: width 300ms var(--ease); } }
+
+/* Lịch sử chat với khách */
+.chatlog-list { display: grid; gap: var(--s2); }
+.chatlog { border: 1px solid var(--line); border-radius: var(--r); background: var(--paper); }
+.chatlog > summary { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: 52px; padding: var(--s3); cursor: pointer; list-style: none; }
+.chatlog > summary::-webkit-details-marker { display: none; }
+.chatlog > summary:hover { background: var(--paper-2); }
+.chatlog__main { display: grid; min-width: 0; gap: 2px; }
+.chatlog__q { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chatlog__body { padding: var(--s3) var(--s4) var(--s4); border-top: 1px solid var(--line); display: grid; gap: var(--s4); }
+.chatlog__turn { display: grid; gap: var(--s2); }
+.chatlog__turn .chat-msg--user { justify-self: end; }
+.chatlog__meta { margin: 0; font-size: 0.78rem; }
+.chatlog__del { justify-self: start; color: var(--danger); }

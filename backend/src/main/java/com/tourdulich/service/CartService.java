@@ -143,7 +143,7 @@ public class CartService {
                 continue;
             }
             CartLine line = e.getValue();
-            long adultPrice = Money.vnd(t.getAdultPrice());
+            long adultPrice = Money.vnd(t.effectiveAdultPrice());
             long childPrice = Money.vnd(TourMapper.effectiveChildPrice(t));
             long subtotal = adultPrice * line.adult() + childPrice * line.child();
             total += subtotal;

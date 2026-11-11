@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { SlidersHorizontal, X } from 'lucide-react'
 import { publicApi } from '../api'
 import { useAsync } from '../hooks/useAsync'
 import TourCard from '../components/TourCard'
 import Pagination from '../components/Pagination'
+import { track } from '../tracking/tracker'
 
 const SORTS = [
   { v: 'newest', t: 'Mới nhất' },
@@ -12,6 +13,16 @@ const SORTS = [
   { v: 'priceAsc', t: 'Giá thấp đến cao' },
   { v: 'priceDesc', t: 'Giá cao đến thấp' },
 ]
+const REGIONS = [
+  { v: '', t: 'Tất cả' },
+  { v: 'DOMESTIC', t: 'Trong nước' },
+  { v: 'INTERNATIONAL', t: 'Nước ngoài' },
+]
+const REGION_HEAD = {
+  '': { title: 'Tìm hành trình của bạn', desc: 'Lọc theo điểm đến, ngân sách và ngày khởi hành. Giá hiển thị là giá cho mỗi người lớn.' },
+  DOMESTIC: { title: 'Khám phá Việt Nam', desc: 'Biển đảo, núi rừng, di sản và ẩm thực khắp ba miền. Giá hiển thị là giá cho mỗi người lớn.' },
+  INTERNATIONAL: { title: 'Hành trình ra thế giới', desc: 'Châu Á, Châu Âu, Châu Úc, Châu Mỹ với hướng dẫn viên tiếng Việt. Giá hiển thị là giá cho mỗi người lớn.' },
+}
 const BUDGETS = [
   { v: '', t: 'Mọi mức giá' },
   { v: '-5000000', t: 'Dưới 5 triệu' },
@@ -26,6 +37,7 @@ export default function Tours() {
   const keyword = sp.get('keyword') || ''
   const categoryId = sp.get('categoryId') || ''
   const destination = sp.get('destination') || ''
+  const region = ['DOMESTIC', 'INTERNATIONAL'].includes(sp.get('region')) ? sp.get('region') : ''
   const minPrice = sp.get('minPrice') || ''
   const maxPrice = sp.get('maxPrice') || ''
   const departureFrom = sp.get('departureFrom') || ''
@@ -36,12 +48,21 @@ export default function Tours() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   useEffect(() => setKw(keyword), [keyword])
 
-  const { data: cats } = useAsync(() => publicApi.categories(), [])
+  const { data: cats } = useAsync(() => publicApi.categories({ region }), [region])
   const { data, loading, error, reload } = useAsync(
     () =>
-      publicApi.tours({ page, size: 9, keyword, categoryId, destination, minPrice, maxPrice, departureFrom, departureTo, sort }),
-    [page, keyword, categoryId, destination, minPrice, maxPrice, departureFrom, departureTo, sort],
+      publicApi.tours({ page, size: 9, keyword, categoryId, destination, region, minPrice, maxPrice, departureFrom, departureTo, sort }),
+    [page, keyword, categoryId, destination, region, minPrice, maxPrice, departureFrom, departureTo, sort],
   )
+
+  // Ghi nhận từ khóa tìm kiếm (một lần cho mỗi từ khóa, kèm số kết quả)
+  const lastSearch = useRef('')
+  useEffect(() => {
+    if (data && keyword && lastSearch.current !== keyword) {
+      lastSearch.current = keyword
+      track('search', { props: { keyword: keyword.slice(0, 60), region: region || undefined, results: data.totalElements } })
+    }
+  }, [data, keyword, region])
 
   const patch = (changes) => {
     const next = new URLSearchParams(sp)
@@ -58,6 +79,7 @@ export default function Tours() {
   const clearAll = () => setSp(new URLSearchParams())
 
   const activeChips = [
+    region && { k: 'region', t: REGIONS.find((r) => r.v === region)?.t || 'Phạm vi' },
     keyword && { k: 'keyword', t: `“${keyword}”` },
     categoryId && { k: 'categoryId', t: (cats || []).find((c) => String(c.id) === categoryId)?.name || 'Danh mục' },
     destination && { k: 'destination', t: destination },
@@ -76,9 +98,8 @@ export default function Tours() {
   return (
     <div className="container">
       <header className="page-head">
-        <span className="eyebrow">Tour du lịch</span>
-        <h1>Tìm hành trình của bạn</h1>
-        <p>Lọc theo điểm đến, ngân sách và ngày khởi hành. Giá hiển thị là giá cho mỗi người lớn.</p>
+        <h1>{REGION_HEAD[region].title}</h1>
+        <p>{REGION_HEAD[region].desc}</p>
       </header>
 
       <div className="tours-layout">
@@ -109,6 +130,20 @@ export default function Tours() {
           </form>
 
           <div className="filter-group">
+            <h3>Phạm vi</h3>
+            <div className="radio-list" role="radiogroup" aria-label="Trong nước hoặc nước ngoài">
+              {REGIONS.map((r) => (
+                <label key={r.v} className={region === r.v ? 'is-on' : ''}>
+                  <span>
+                    <input type="radio" name="region" checked={region === r.v} onChange={() => patch({ region: r.v, categoryId: '' })} />
+                    {r.t}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="filter-group">
             <h3>Loại hành trình</h3>
             <div className="radio-list" role="radiogroup" aria-label="Danh mục">
               <label className={!categoryId ? 'is-on' : ''}>
@@ -117,7 +152,7 @@ export default function Tours() {
                   Tất cả
                 </span>
               </label>
-              {(cats || []).map((c) => (
+              {(cats || []).filter((c) => !region || c.tourCount > 0 || String(c.id) === categoryId).map((c) => (
                 <label key={c.id} className={String(c.id) === categoryId ? 'is-on' : ''}>
                   <span>
                     <input

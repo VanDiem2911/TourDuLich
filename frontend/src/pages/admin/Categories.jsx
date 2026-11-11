@@ -133,7 +133,6 @@ export default function AdminCategories() {
     <>
       <div className="admin-head">
         <div>
-          <span className="eyebrow">Danh mục</span>
           <h1>Danh mục tour</h1>
           <p>Nhóm tour theo vùng miền hoặc loại hình. Danh mục còn tour thì không thể xóa.</p>
         </div>

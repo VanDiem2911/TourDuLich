@@ -4,12 +4,21 @@ import { ChevronDown, ClipboardList, LayoutDashboard, LogOut, Menu, ShoppingBag,
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import ConfirmDialog from '../components/ConfirmDialog'
+import ChatWidget from '../components/ChatWidget'
+import TrackingConsent from '../components/TrackingConsent'
+import { usePageTracking } from '../tracking/tracker'
 
+/** `region`: mục menu trỏ tới /tours?region=... (NavLink chỉ so khớp pathname nên tự xét thêm query). */
 const NAV = [
   { to: '/', label: 'Trang chủ', end: true },
-  { to: '/tours', label: 'Tour du lịch' },
+  { to: '/tours?region=DOMESTIC', label: 'Tour trong nước', region: 'DOMESTIC' },
+  { to: '/tours?region=INTERNATIONAL', label: 'Tour nước ngoài', region: 'INTERNATIONAL' },
   { to: '/contact', label: 'Liên hệ' },
 ]
+
+function isRegionActive(location, region) {
+  return location.pathname === '/tours' && new URLSearchParams(location.search).get('region') === region
+}
 
 export function Wordmark() {
   return (
@@ -98,6 +107,7 @@ export default function MainLayout() {
   const { count } = useCart()
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
+  usePageTracking()
 
   useEffect(() => {
     setMenuOpen(false)
@@ -117,11 +127,22 @@ export default function MainLayout() {
           </Link>
 
           <nav id="main-nav" className={`main-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Điều hướng chính">
-            {NAV.map((item) => (
-              <NavLink key={item.to} to={item.to} end={item.end}>
-                {item.label}
-              </NavLink>
-            ))}
+            {NAV.map((item) =>
+              item.region ? (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={isRegionActive(location, item.region) ? 'active' : undefined}
+                  aria-current={isRegionActive(location, item.region) ? 'page' : undefined}
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <NavLink key={item.to} to={item.to} end={item.end}>
+                  {item.label}
+                </NavLink>
+              ),
+            )}
           </nav>
 
           <div className="header-actions">
@@ -180,6 +201,8 @@ export default function MainLayout() {
             <div>
               <h3>Khám phá</h3>
               <ul>
+                <li><Link to="/tours?region=DOMESTIC">Tour trong nước</Link></li>
+                <li><Link to="/tours?region=INTERNATIONAL">Tour nước ngoài</Link></li>
                 <li><Link to="/tours">Tất cả tour</Link></li>
                 <li><Link to="/tours?sort=departureAsc">Sắp khởi hành</Link></li>
                 <li><Link to="/tours?sort=priceAsc">Giá tốt nhất</Link></li>
@@ -208,6 +231,8 @@ export default function MainLayout() {
           </div>
         </div>
       </footer>
+      <ChatWidget />
+      <TrackingConsent />
     </>
   )
 }

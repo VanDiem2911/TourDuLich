@@ -54,6 +54,16 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpec
     @Query("select b from Booking b join fetch b.user where b.id = :id")
     Optional<Booking> lockById(@Param("id") Long id);
 
+    /** Doanh thu / số đơn trong khoảng thời gian (theo ngày đặt) cho bộ lọc Dashboard. */
+    @Query("select sum(b.totalAmount) from Booking b where b.paymentStatus = :status and b.createdAt >= :from")
+    BigDecimal sumTotalAmountByPaymentStatusSince(@Param("status") PaymentStatus status, @Param("from") LocalDateTime from);
+
+    @Query("select b.bookingStatus, count(b) from Booking b where b.createdAt >= :from group by b.bookingStatus")
+    List<Object[]> countGroupedByStatusSince(@Param("from") LocalDateTime from);
+
+    @EntityGraph(attributePaths = "user")
+    List<Booking> findTop8ByCreatedAtGreaterThanEqualOrderByCreatedAtDescIdDesc(LocalDateTime from);
+
     @Query("select sum(b.totalAmount) from Booking b where b.paymentStatus = :status")
     BigDecimal sumTotalAmountByPaymentStatus(@Param("status") PaymentStatus status);
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
+  Activity,
   ArrowUpRight,
   ClipboardList,
   LayoutDashboard,
@@ -8,6 +9,7 @@ import {
   Mail,
   Map as MapIcon,
   Menu,
+  Sparkles,
   Tags,
   Users,
   X,
@@ -23,6 +25,8 @@ const LINKS = [
   { to: '/admin/bookings', label: 'Đơn đặt tour', icon: ClipboardList },
   { to: '/admin/users', label: 'Tài khoản', icon: Users },
   { to: '/admin/contacts', label: 'Liên hệ', icon: Mail },
+  { to: '/admin/tracking', label: 'Hành vi người dùng', icon: Activity },
+  { to: '/admin/ai', label: 'Trợ lý AI', icon: Sparkles },
 ]
 
 export default function AdminLayout() {

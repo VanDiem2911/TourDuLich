@@ -23,7 +23,6 @@ export default function MyBookings() {
   return (
     <div className="container">
       <header className="page-head">
-        <span className="eyebrow">Tài khoản</span>
         <h1>Đơn đặt tour của tôi</h1>
         <p>Theo dõi trạng thái, thanh toán và hủy đơn khi còn chờ xác nhận.</p>
       </header>

@@ -20,7 +20,7 @@ import java.util.List;
 
 /**
  * Dev: nếu bảng categories còn trống thì tự chạy file SQL dữ liệu mẫu (app.seed.sql-path, mặc định
- * ../database/seed.sql; thử thêm database/seed.sql). Không có file thì bỏ qua êm. Chạy sau DataInitializer.
+ * ../database/seed.sql; thử thêm database/seed.sql), rồi seed_fiditour.sql nếu chưa có tour FDT-*. Không có file thì bỏ qua êm. Chạy sau DataInitializer.
  */
 @Slf4j
 @Order(2)
@@ -38,19 +38,38 @@ public class SqlDataSeeder implements CommandLineRunner {
     @Value("${app.seed.reset:false}")
     private boolean reset;
 
+    /** Đặt SEED_FIDITOUR_RELOAD=true (một lần) để nạp lại seed_fiditour.sql sau khi chạy lại scraper (chỉ ghi đè phần nội dung tour FDT-*). */
+    @Value("${app.seed.fiditour-reload:false}")
+    private boolean reloadFiditour;
+
     @Override
     public void run(String... args) {
         if (reset) {
             resetSampleData();
         }
+        if (categoryRepository.count() == 0) {
+            Path file = resolveSqlFile("seed.sql", props.seed().sqlPath());
+            if (file == null) {
+                log.info("Bảng categories trống nhưng không tìm thấy file seed SQL ({}), bỏ qua.", props.seed().sqlPath());
+                return;
+            }
+            execute(file);
+        }
+        // Tour lấy từ fiditour.com (tools/scrape_fiditour.py). Nạp khi chưa có tour FDT-* nào có ghi chú (notes):
+        // DB mới, hoặc DB cũ đã nạp bản trước khi có cột notes (file dùng ON DUPLICATE KEY UPDATE nên cập nhật được).
         if (categoryRepository.count() > 0) {
-            return;
+            Integer loaded = jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM tours WHERE tour_code LIKE 'FDT-%' AND notes IS NOT NULL", Integer.class);
+            if (reloadFiditour || (loaded != null && loaded == 0)) {
+                Path extra = resolveSqlFile("seed_fiditour.sql", null);
+                if (extra != null) {
+                    execute(extra);
+                }
+            }
         }
-        Path file = resolveSqlFile();
-        if (file == null) {
-            log.info("Bảng categories trống nhưng không tìm thấy file seed SQL ({}), bỏ qua.", props.seed().sqlPath());
-            return;
-        }
+    }
+
+    private void execute(Path file) {
         try {
             ResourceDatabasePopulator populator =
                     new ResourceDatabasePopulator(false, false, "UTF-8", new FileSystemResource(file));
@@ -76,14 +95,13 @@ public class SqlDataSeeder implements CommandLineRunner {
         }
     }
 
-    private Path resolveSqlFile() {
+    private Path resolveSqlFile(String name, String configured) {
         List<Path> candidates = new ArrayList<>();
-        String configured = props.seed().sqlPath();
         if (configured != null && !configured.isBlank()) {
             candidates.add(Paths.get(configured));
         }
-        candidates.add(Paths.get("database", "seed.sql"));
-        candidates.add(Paths.get("..", "database", "seed.sql"));
+        candidates.add(Paths.get("database", name));
+        candidates.add(Paths.get("..", "database", name));
         for (Path p : candidates) {
             if (Files.isRegularFile(p)) {
                 return p;

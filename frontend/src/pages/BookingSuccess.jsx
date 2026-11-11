@@ -3,10 +3,15 @@ import { Check } from 'lucide-react'
 import { bookingApi } from '../api'
 import { useAsync } from '../hooks/useAsync'
 import { fmtDate, money } from '../utils/format'
+import { useEffect } from 'react'
+import { track } from '../tracking/tracker'
 
 export default function BookingSuccess() {
   const { id } = useParams()
   const { data: b, loading, error } = useAsync(() => bookingApi.detail(id), [id])
+  useEffect(() => {
+    if (b?.id) track('booking_created', { props: { bookingId: b.id, total: b.totalAmount } })
+  }, [b?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <div className="container page"><div className="skeleton" style={{ height: 260 }} /></div>
   if (error || !b) {
@@ -26,7 +31,6 @@ export default function BookingSuccess() {
       <span className="success-mark">
         <Check size={32} aria-hidden="true" />
       </span>
-      <span className="eyebrow">Đặt tour thành công</span>
       <h1 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)' }}>Chỗ của bạn đã được giữ</h1>
       <p className="lead">
         Mã đơn <strong className="num">{b.bookingCode}</strong>. Chúng tôi đã gửi email xác nhận đến {b.contactEmail}.

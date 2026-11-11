@@ -33,6 +33,10 @@ public interface TourRepository extends JpaRepository<Tour, Long>, JpaSpecificat
     @EntityGraph(attributePaths = "category")
     Page<Tour> findAll(Specification<Tour> spec, Pageable pageable);
 
+    /** Toàn bộ tour đang mở bán (kèm danh mục) để lập chỉ mục cho trợ lý AI. */
+    @Query("select t from Tour t join fetch t.category where t.status = com.tourdulich.entity.enums.TourStatus.ACTIVE order by t.id")
+    List<Tour> findAllActiveWithCategory();
+
     @Query("select t from Tour t join fetch t.category where t.id = :id")
     Optional<Tour> findWithCategoryById(@Param("id") Long id);
 
@@ -69,6 +73,12 @@ public interface TourRepository extends JpaRepository<Tour, Long>, JpaSpecificat
     @Query("select t.category.id, count(t) from Tour t "
             + "where t.status = com.tourdulich.entity.enums.TourStatus.ACTIVE group by t.category.id")
     List<Object[]> countActiveGroupedByCategory();
+
+    /** Số tour ACTIVE theo danh mục, chỉ trong một phạm vi (trong nước / nước ngoài): [categoryId, count]. */
+    @Query("select t.category.id, count(t) from Tour t "
+            + "where t.status = com.tourdulich.entity.enums.TourStatus.ACTIVE and t.region = :region "
+            + "group by t.category.id")
+    List<Object[]> countActiveGroupedByCategoryAndRegion(@Param("region") com.tourdulich.entity.enums.TourRegion region);
 
     /** Tổng số tour (mọi trạng thái) theo danh mục: [categoryId, count]. */
     @Query("select t.category.id, count(t) from Tour t where t.category.id in :ids group by t.category.id")

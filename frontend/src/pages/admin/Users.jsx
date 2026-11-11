@@ -53,7 +53,6 @@ export default function AdminUsers() {
     <>
       <div className="admin-head">
         <div>
-          <span className="eyebrow">Tài khoản</span>
           <h1>Người dùng</h1>
           <p>Khóa tài khoản vi phạm hoặc mở lại khi cần. Tài khoản quản trị viên và tài khoản của bạn được bảo vệ.</p>
         </div>

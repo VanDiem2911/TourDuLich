@@ -6,7 +6,7 @@ import java.util.List;
 
 /** Các cấu hình tùy biến của ứng dụng (tiền tố "app" trong application.yml). */
 @ConfigurationProperties(prefix = "app")
-public record AppProperties(Cors cors, Jwt jwt, Mail mail, Seed seed, Payment payment, Upload upload) {
+public record AppProperties(Cors cors, Jwt jwt, Mail mail, Seed seed, Payment payment, Upload upload, Ai ai) {
 
     public record Cors(List<String> allowedOrigins) {
     }
@@ -33,6 +33,15 @@ public record AppProperties(Cors cors, Jwt jwt, Mail mail, Seed seed, Payment pa
      */
     public record Payment(String bankName, String bankCode, String accountNumber, String accountName,
                           String webhookKey, boolean simulateEnabled) {
+    }
+
+    /**
+     * Trợ lý AI (RAG). knowledgeDir: thư mục tài liệu bổ sung ngoài classpath (mỗi file .md/.txt là một tài liệu).
+     * storePath: file lưu vector (SimpleVectorStore). topK/similarityThreshold: số đoạn lấy ra và ngưỡng giống nhau tối thiểu.
+     * maxHistory: số tin nhắn gần nhất được gửi kèm; maxMessageChars: độ dài tối đa mỗi tin.
+     */
+    public record Ai(String knowledgeDir, String storePath, int topK, double similarityThreshold, int maxHistory,
+                     int maxMessageChars) {
     }
 
     public record Upload(String dir) {

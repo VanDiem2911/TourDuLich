@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -37,15 +38,28 @@ public class DashboardService {
     private final ContactRepository contactRepository;
     private final BookingMapper bookingMapper;
 
-    public DashboardStats stats() {
-        BigDecimal revenue = bookingRepository.sumTotalAmountByPaymentStatus(PaymentStatus.PAID);
+    /** Mốc bắt đầu của bộ lọc thời gian (giờ Việt Nam): today, week (từ thứ Hai), month, year; khác thì tất cả. */
+    static LocalDateTime periodStart(String period, LocalDate today) {
+        String p = period == null ? "all" : period.trim().toLowerCase();
+        return switch (p) {
+            case "today" -> today.atStartOfDay();
+            case "week" -> today.with(java.time.DayOfWeek.MONDAY).atStartOfDay();
+            case "month" -> today.withDayOfMonth(1).atStartOfDay();
+            case "year" -> today.withDayOfYear(1).atStartOfDay();
+            default -> LocalDateTime.of(2000, 1, 1, 0, 0);
+        };
+    }
+
+    public DashboardStats stats(String period) {
+        LocalDateTime from = periodStart(period, LocalDate.now(VN));
+        BigDecimal revenue = bookingRepository.sumTotalAmountByPaymentStatusSince(PaymentStatus.PAID, from);
 
         Map<String, Long> byStatus = new LinkedHashMap<>();
         for (BookingStatus s : BookingStatus.values()) {
             byStatus.put(s.name(), 0L);
         }
         long totalBookings = 0;
-        for (Object[] row : bookingRepository.countGroupedByStatus()) {
+        for (Object[] row : bookingRepository.countGroupedByStatusSince(from)) {
             long n = (Long) row[1];
             byStatus.put(((BookingStatus) row[0]).name(), n);
             totalBookings += n;
@@ -61,8 +75,8 @@ public class DashboardService {
                 contactRepository.countByStatus(ContactStatus.NEW),
                 revenueByMonth(),
                 byStatus,
-                bookingItemRepository.findTopTours(PageRequest.of(0, 5)),
-                bookingMapper.toSummaries(bookingRepository.findTop8ByOrderByCreatedAtDescIdDesc(), true),
+                bookingItemRepository.findTopToursSince(from, PageRequest.of(0, 5)),
+                bookingMapper.toSummaries(bookingRepository.findTop8ByCreatedAtGreaterThanEqualOrderByCreatedAtDescIdDesc(from), true),
                 tourRepository.findLowSeats(5, PageRequest.of(0, 5)).stream().map(TourMapper::toSummary).toList());
     }
 

@@ -373,7 +373,6 @@ export default function AdminBookings() {
     <>
       <div className="admin-head">
         <div>
-          <span className="eyebrow">Đơn hàng</span>
           <h1>Đơn đặt tour</h1>
           <p>Xác nhận, hoàn tất hoặc hủy đơn; ghi nhận thanh toán thu tại văn phòng.</p>
         </div>

@@ -41,6 +41,17 @@ export function parseItinerary(text) {
     })
 }
 
+/** Ghi chú tour: các khối cách nhau bằng dòng trống; dòng đầu là tiêu đề, các dòng sau là nội dung. */
+export function parseNotes(text) {
+  if (!text) return []
+  return text
+    .replace(/\r/g, '')
+    .split(/\n\s*\n/)
+    .map((block) => block.trim().split('\n').map((l) => l.trim()).filter(Boolean))
+    .filter((lines) => lines.length > 1)
+    .map(([title, ...lines]) => ({ title, lines }))
+}
+
 export const BOOKING_STATUS = {
   PENDING: { label: 'Chờ xác nhận', tone: 'warn' },
   CONFIRMED: { label: 'Đã xác nhận', tone: 'info' },

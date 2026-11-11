@@ -107,7 +107,7 @@ public class BookingService {
             }
             // Giá luôn lấy từ DB tại thời điểm đặt, không tin client
             BigDecimal childPrice = TourMapper.effectiveChildPrice(tour);
-            BigDecimal subtotal = tour.getAdultPrice().multiply(BigDecimal.valueOf(line.adult()))
+            BigDecimal subtotal = tour.effectiveAdultPrice().multiply(BigDecimal.valueOf(line.adult()))
                     .add(childPrice.multiply(BigDecimal.valueOf(line.child())));
             total = total.add(subtotal);
 
@@ -115,7 +115,7 @@ public class BookingService {
             item.setTour(tour);
             item.setTourName(tour.getName());
             item.setDepartureDate(tour.getDepartureDate());
-            item.setAdultPrice(tour.getAdultPrice());
+            item.setAdultPrice(tour.effectiveAdultPrice());
             item.setChildPrice(childPrice);
             item.setAdultQuantity(line.adult());
             item.setChildQuantity(line.child());

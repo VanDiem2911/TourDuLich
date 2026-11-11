@@ -1,11 +1,152 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, RefreshCw } from 'lucide-react'
+import { ArrowRight, RefreshCw, Sparkles } from 'lucide-react'
 import { adminApi } from '../../api'
+import { getErrorMessage } from '../../api/client'
+import { useToast } from '../../components/Toast'
 import { useAsync } from '../../hooks/useAsync'
 import { BOOKING_STATUS, PAYMENT_STATUS, fmtDate, money } from '../../utils/format'
 import StatusTag from '../../components/StatusTag'
-import { EmptyState, ErrorState, fmtCompact } from './AdminKit'
+import { EmptyState, ErrorState, Tile, fmtCompact } from './AdminKit'
+
+/* ------------------------------ Hành vi người dùng + trợ lý AI ------------------------------ */
+
+const FUNNEL = [
+  { k: 'view_tour', t: 'Xem chi tiết tour' },
+  { k: 'add_to_cart', t: 'Thêm vào phiếu đặt tạm' },
+  { k: 'begin_checkout', t: 'Vào trang đặt tour' },
+  { k: 'booking_created', t: 'Đặt tour thành công' },
+]
+
+function BehaviorPanel() {
+  const toast = useToast()
+  const { data, loading, error, reload } = useAsync(() => adminApi.trackingSummary(7), [])
+  const ai = useAsync(() => adminApi.aiStatus(), [])
+  const aiKeys = useAsync(() => adminApi.aiKeys(), [])
+  const [reindexing, setReindexing] = useState(false)
+
+  const reindex = async () => {
+    setReindexing(true)
+    try {
+      await adminApi.aiReindex()
+      toast.success('Đã lập lại chỉ mục cho trợ lý AI.')
+      ai.reload()
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Không lập được chỉ mục AI.'))
+    } finally {
+      setReindexing(false)
+    }
+  }
+
+  const base = data?.funnel?.view_tour || 0
+  const pct = (n) => (base > 0 ? `${Math.round((100 * n) / base)}%` : '—')
+  const a = ai.data
+
+  return (
+    <section className="panel" aria-labelledby="h-behavior" style={{ marginTop: 'var(--s5)' }}>
+      <h2 id="h-behavior">Hành vi người dùng (7 ngày)</h2>
+      <p className="panel__sub">
+        Dữ liệu ẩn danh từ các khách đã đồng ý theo dõi. Phễu đếm số phiên truy cập đi tới từng bước.{' '}
+        <Link to="/admin/tracking">Xem chi tiết hành vi</Link>
+      </p>
+
+      {error ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : !data ? (
+        <div className="skeleton" style={{ height: 140 }} />
+      ) : (
+        <div aria-busy={loading}>
+          <div className="stat-grid stat-grid--dash" style={{ marginBottom: 'var(--s5)' }}>
+            <Tile label="Khách truy cập" value={data.visitors} />
+            <Tile label="Phiên truy cập" value={data.sessions} />
+            <Tile label="Lượt xem trang" value={data.byType?.page_view ?? 0} />
+            <Tile label="Câu hỏi cho trợ lý AI" value={data.byType?.chat_message ?? 0} />
+          </div>
+
+          <div className="dash-grid dash-grid--even" style={{ marginTop: 0 }}>
+            <div>
+              <h3 style={{ fontSize: '1rem' }}>Phễu chuyển đổi</h3>
+              <div className="table-wrap" tabIndex={0} role="region" aria-label="Phễu chuyển đổi">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Bước</th>
+                      <th scope="col" className="r">Phiên</th>
+                      <th scope="col" className="r">Tỷ lệ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {FUNNEL.map((s) => (
+                      <tr key={s.k}>
+                        <td>{s.t}</td>
+                        <td className="r num">{data.funnel?.[s.k] ?? 0}</td>
+                        <td className="r num">{pct(data.funnel?.[s.k] ?? 0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: '1rem' }}>Tour được xem nhiều</h3>
+              {data.topTours?.length ? (
+                <div className="table-wrap" tabIndex={0} role="region" aria-label="Tour được xem nhiều">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Tour</th>
+                        <th scope="col" className="r">Lượt xem</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.topTours.map((t) => (
+                        <tr key={t.tourId}>
+                          <td>
+                            <span className="cell-main">{t.name || `Tour #${t.tourId}`}</span>
+                          </td>
+                          <td className="r num">{t.views}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="muted">Chưa có lượt xem tour nào.</p>
+              )}
+              {data.topSearches?.length > 0 && (
+                <p className="muted" style={{ marginTop: 'var(--s3)', fontSize: '0.88rem' }}>
+                  Từ khóa tìm nhiều: {data.topSearches.map((s) => `${s.keyword} (${s.n})`).join(' · ')}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)', flexWrap: 'wrap', marginTop: 'var(--s5)', paddingTop: 'var(--s4)', borderTop: '1px solid var(--line)' }}>
+        <Sparkles size={18} aria-hidden="true" />
+        <span style={{ flex: 1, minWidth: 200 }}>
+          <strong>
+            <Link to="/admin/ai" style={{ color: 'inherit' }}>Trợ lý AI</Link>:
+          </strong>{' '}
+          {!a ? 'đang kiểm tra…' : !a.enabled ? 'chưa bật (chưa có GEMINI_API_KEY trong backend/.env)' : a.indexing ? `đang lập chỉ mục… ${a.doneChunks}/${a.totalChunks} đoạn` : a.ready ? `đang hoạt động, ${a.chunks} đoạn dữ liệu (${a.tourChunks} đoạn tour, ${a.docChunks} đoạn tài liệu)` : 'chưa có chỉ mục, hãy bấm "Lập lại chỉ mục"'}
+          {a?.enabled && aiKeys.data?.chat && (
+            <small className="muted" style={{ display: 'block' }}>
+              {aiKeys.data.chat.keyCount} API key
+              {aiKeys.data.chat.keyCount > 1 ? ' (có dự phòng)' : ' (chưa có key dự phòng)'} · đang dùng key …
+              {aiKeys.data.chat.keys.find((k) => k.active)?.key?.replace('…', '')} · đã tự chuyển key {aiKeys.data.chat.failovers} lần
+              {aiKeys.data.chat.keys.some((k) => k.cooling) ? ' · có key đang tạm nghỉ do hết hạn mức/lỗi' : ''}
+            </small>
+          )}
+        </span>
+        <button type="button" className="btn btn-outline btn-sm" onClick={reindex} disabled={reindexing || !a?.enabled}>
+          {reindexing && <span className="spinner" aria-hidden="true" />} Lập lại chỉ mục
+        </button>
+      </div>
+    </section>
+  )
+}
 
 /* ------------------------------ Biểu đồ doanh thu (SVG thuần) ------------------------------ */
 
@@ -181,29 +322,6 @@ function StatusBreakdown({ counts }) {
 
 /* ------------------------------ Trang ------------------------------ */
 
-function Tile({ label, value, note, to, attn, wide, goLabel }) {
-  const cls = `stat ${wide ? 'stat--wide' : ''} ${attn ? 'stat--attn' : ''}`
-  const body = (
-    <>
-      <span>{label}</span>
-      <strong className="num">{value}</strong>
-      {note && <small>{note}</small>}
-      {attn && goLabel && (
-        <em className="stat__go">
-          {goLabel} <ArrowRight size={14} aria-hidden="true" />
-        </em>
-      )}
-    </>
-  )
-  return to ? (
-    <Link to={to} className={cls}>
-      {body}
-    </Link>
-  ) : (
-    <div className={cls}>{body}</div>
-  )
-}
-
 function DashSkeleton() {
   return (
     <div aria-busy="true">
@@ -224,18 +342,35 @@ function DashSkeleton() {
   )
 }
 
+const PERIODS = [
+  { v: 'all', t: 'Tất cả' },
+  { v: 'today', t: 'Hôm nay' },
+  { v: 'week', t: 'Tuần này' },
+  { v: 'month', t: 'Tháng này' },
+  { v: 'year', t: 'Năm nay' },
+]
+
 export default function AdminDashboard() {
-  const { data, loading, error, reload } = useAsync(() => adminApi.stats(), [])
+  const [period, setPeriod] = useState('all')
+  const { data, loading, error, reload } = useAsync(() => adminApi.stats(period), [period])
+  const periodLabel = PERIODS.find((p) => p.v === period)?.t.toLowerCase()
+  const inPeriod = period === 'all' ? '' : ` (${periodLabel})`
 
   return (
     <>
       <div className="admin-head">
         <div>
-          <span className="eyebrow">Tổng quan</span>
           <h1>Bảng điều khiển</h1>
           <p>Số liệu kinh doanh và việc đang chờ xử lý. Doanh thu chỉ tính các đơn đã thanh toán.</p>
         </div>
         <div className="admin-head__actions">
+          <div className="seg" role="group" aria-label="Khoảng thời gian thống kê">
+            {PERIODS.map((p) => (
+              <button key={p.v} type="button" aria-pressed={period === p.v} onClick={() => setPeriod(p.v)}>
+                {p.t}
+              </button>
+            ))}
+          </div>
           <button type="button" className="btn btn-outline btn-sm" onClick={reload} disabled={loading}>
             <RefreshCw size={16} aria-hidden="true" />
             Làm mới
@@ -250,10 +385,10 @@ export default function AdminDashboard() {
       ) : (
         <div aria-busy={loading}>
           <div className="stat-grid stat-grid--dash">
-            <Tile wide label="Doanh thu" value={money(data.totalRevenue)} note="Tổng các đơn đã thanh toán" />
-            <Tile label="Tổng đơn đặt tour" value={data.totalBookings} to="/admin/bookings" />
+            <Tile wide label={`Doanh thu${inPeriod}`} value={money(data.totalRevenue)} note="Tổng các đơn đã thanh toán" />
+            <Tile label={`Tổng đơn đặt tour${inPeriod}`} value={data.totalBookings} to="/admin/bookings" />
             <Tile
-              label="Đơn chờ xác nhận"
+              label={`Đơn chờ xác nhận${inPeriod}`}
               value={data.pendingBookings}
               to="/admin/bookings?status=PENDING"
               attn={data.pendingBookings > 0}
@@ -279,7 +414,7 @@ export default function AdminDashboard() {
             </section>
             <section className="panel" aria-labelledby="h-status">
               <h2 id="h-status">Trạng thái đơn</h2>
-              <p className="panel__sub">Phân bổ toàn bộ đơn theo tiến độ xử lý.</p>
+              <p className="panel__sub">Phân bổ {period === 'all' ? 'toàn bộ đơn' : `đơn đặt ${periodLabel}`} theo tiến độ xử lý.</p>
               <StatusBreakdown counts={data.bookingsByStatus} />
             </section>
           </div>
@@ -287,7 +422,7 @@ export default function AdminDashboard() {
           <div className="dash-grid dash-grid--even">
             <section className="panel" aria-labelledby="h-top">
               <h2 id="h-top">Tour bán chạy</h2>
-              <p className="panel__sub">Top 5 theo số chỗ đã đặt.</p>
+              <p className="panel__sub">Top 5 theo số chỗ đã đặt{period === 'all' ? '' : ` ${periodLabel}`}.</p>
               {data.topTours?.length ? (
                 <div className="table-wrap" tabIndex={0} role="region" aria-label="Bảng tour bán chạy">
                   <table className="table">
@@ -328,7 +463,7 @@ export default function AdminDashboard() {
             <section className="panel" aria-labelledby="h-recent">
               <h2 id="h-recent">Đơn mới nhất</h2>
               <p className="panel__sub">
-                8 đơn gần đây. <Link to="/admin/bookings">Xem tất cả đơn</Link>
+                8 đơn gần đây{period === 'all' ? '' : ` ${periodLabel}`}. <Link to="/admin/bookings">Xem tất cả đơn</Link>
               </p>
               {data.recentBookings?.length ? (
                 <div className="table-wrap" tabIndex={0} role="region" aria-label="Bảng đơn mới nhất">
@@ -376,6 +511,7 @@ export default function AdminDashboard() {
               )}
             </section>
           </div>
+          <BehaviorPanel />
         </div>
       )}
     </>

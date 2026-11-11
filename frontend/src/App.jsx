@@ -22,6 +22,8 @@ import AdminCategories from './pages/admin/Categories'
 import AdminBookings from './pages/admin/Bookings'
 import AdminUsers from './pages/admin/Users'
 import AdminContacts from './pages/admin/Contacts'
+import AdminTracking from './pages/admin/Tracking'
+import AdminAiAssistant from './pages/admin/AiAssistant'
 
 export default function App() {
   return (
@@ -58,6 +60,8 @@ export default function App() {
           <Route path="bookings" element={<AdminBookings />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="contacts" element={<AdminContacts />} />
+          <Route path="tracking" element={<AdminTracking />} />
+          <Route path="ai" element={<AdminAiAssistant />} />
         </Route>
       </Route>
     </Routes>

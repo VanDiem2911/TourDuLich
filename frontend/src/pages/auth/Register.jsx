@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { authApi } from '../../api/auth'
 import { getErrorMessage, getFieldErrors } from '../../api/client'
 import { useAuth } from '../../context/AuthContext'
+import { track } from '../../tracking/tracker'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE_RE = /^0\d{9}$/
@@ -75,6 +76,7 @@ export default function Register() {
     setSubmitting(true)
     try {
       await authApi.register({ ...form, fullName: form.fullName.trim(), email: form.email.trim() })
+      track('register')
       navigate('/login', { replace: true, state: { registered: true } })
     } catch (err) {
       setErrors(getFieldErrors(err))
@@ -93,7 +95,6 @@ export default function Register() {
       </div>
       <div className="split__form">
         <div className="auth-card">
-        <span className="eyebrow">Thành viên mới</span>
         <h1>Tạo tài khoản</h1>
         <form className="form" onSubmit={onSubmit} noValidate>
           {formError && (

@@ -8,6 +8,7 @@ import com.tourdulich.dto.tour.TourSummary;
 import com.tourdulich.entity.Category;
 import com.tourdulich.entity.Tour;
 import com.tourdulich.entity.enums.CategoryStatus;
+import com.tourdulich.entity.enums.TourRegion;
 import com.tourdulich.entity.enums.TourStatus;
 import com.tourdulich.exception.ApiException;
 import com.tourdulich.repository.CategoryRepository;
@@ -40,9 +41,12 @@ public class TourService {
     private final TourRepository tourRepository;
     private final CategoryRepository categoryRepository;
 
-    public List<CategoryResponse> listCategories() {
+    public List<CategoryResponse> listCategories(TourRegion region) {
         Map<Long, Long> counts = new HashMap<>();
-        for (Object[] row : tourRepository.countActiveGroupedByCategory()) {
+        List<Object[]> rows = region == null
+                ? tourRepository.countActiveGroupedByCategory()
+                : tourRepository.countActiveGroupedByCategoryAndRegion(region);
+        for (Object[] row : rows) {
             counts.put((Long) row[0], (Long) row[1]);
         }
         return categoryRepository.findByStatusOrderByNameAsc(CategoryStatus.ACTIVE).stream()
@@ -52,13 +56,16 @@ public class TourService {
     }
 
     public PageResponse<TourSummary> search(int page, int size, String keyword, Long categoryId, String destination,
-                                            BigDecimal minPrice, BigDecimal maxPrice,
+                                            TourRegion region, BigDecimal minPrice, BigDecimal maxPrice,
                                             LocalDate departureFrom, LocalDate departureTo, String sort) {
         Specification<Tour> spec = (root, query, cb) -> {
             List<Predicate> ps = new ArrayList<>();
             ps.add(cb.equal(root.get("status"), TourStatus.ACTIVE));
             if (categoryId != null) {
                 ps.add(cb.equal(root.get("category").get("id"), categoryId));
+            }
+            if (region != null) {
+                ps.add(cb.equal(root.get("region"), region));
             }
             if (destination != null && !destination.isBlank()) {
                 ps.add(cb.equal(cb.lower(root.get("destination")), destination.trim().toLowerCase()));

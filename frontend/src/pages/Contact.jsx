@@ -3,6 +3,10 @@ import { publicApi } from '../api'
 import { getErrorMessage, getFieldErrors } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 
+// Địa chỉ văn phòng dùng cho bản đồ Google Maps (nhúng không cần API key). Đổi ở đây nếu đổi địa chỉ.
+const OFFICE_ADDRESS = '12 Nguyễn Văn Bảo, Phường 4, Gò Vấp, TP.HCM'
+const MAP_QUERY = encodeURIComponent(OFFICE_ADDRESS)
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE_RE = /^(0|\+84)[0-9]{9,10}$/
 
@@ -66,18 +70,36 @@ export default function Contact() {
   return (
     <div className="container">
       <header className="page-head">
-        <span className="eyebrow">Liên hệ</span>
         <h1>Nói cho chúng tôi biết bạn muốn đi đâu</h1>
         <p>Tư vấn viên phản hồi trong ngày làm việc. Cho biết ngân sách, số người và thời gian dự kiến để gợi ý được sát hơn.</p>
       </header>
 
       <div className="contact-layout">
+        <div className="contact-side">
         <dl className="contact-info" style={{ margin: 0 }}>
           <div><dt>Văn phòng</dt><dd>12 Nguyễn Văn Bảo, P.4, Gò Vấp, TP.HCM</dd></div>
           <div><dt>Điện thoại</dt><dd><a href="tel:19001234" style={{ color: 'inherit', textDecoration: 'none' }}>1900 1234</a></dd></div>
           <div><dt>Email</dt><dd>hotro@tourdulich.local</dd></div>
           <div><dt>Giờ làm việc</dt><dd>Thứ 2 – Thứ 7, 8:00 – 18:00</dd></div>
         </dl>
+        <div className="contact-map">
+          <iframe
+            title="Bản đồ vị trí văn phòng: 12 Nguyễn Văn Bảo, Gò Vấp, TP.HCM"
+            src={`https://www.google.com/maps?q=${MAP_QUERY}&z=16&output=embed`}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
+          />
+          <a
+            className="link-arrow"
+            href={`https://www.google.com/maps/search/?api=1&query=${MAP_QUERY}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Mở bản đồ lớn hơn
+          </a>
+        </div>
+        </div>
 
         {done ? (
           <div className="card" role="status">

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowDown, ArrowUp, ChevronDown, Image as ImageIcon, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { adminApi } from '../../api'
+import { uploadImage } from '../../api/cloudinary'
 import { getErrorMessage } from '../../api/client'
 import { TOUR_STATUS, fmtDateTime, money, parseItinerary } from '../../utils/format'
 import { useAsync } from '../../hooks/useAsync'
@@ -57,11 +58,15 @@ const EMPTY = {
   transport: '',
   departureDate: '',
   adultPrice: '',
+  promoPrice: '',
   childPrice: '',
   totalSeats: '',
   imageUrl: '',
   shortDescription: '',
+  notes: '',
+  gallery: '',
   status: 'ACTIVE',
+  region: 'DOMESTIC',
 }
 
 const fromTour = (t) => ({
@@ -73,12 +78,17 @@ const fromTour = (t) => ({
   duration: t.duration ?? '',
   transport: t.transport ?? '',
   departureDate: toLocalInput(t.departureDate),
-  adultPrice: t.adultPrice != null ? String(t.adultPrice) : '',
+  // Khi có khuyến mãi, API trả adultPrice = giá đang bán và originalPrice = giá niêm yết
+  adultPrice: t.originalPrice > 0 ? String(t.originalPrice) : t.adultPrice != null ? String(t.adultPrice) : '',
+  promoPrice: t.originalPrice > 0 ? String(t.adultPrice) : '',
   childPrice: t.childPrice != null ? String(t.childPrice) : '',
   totalSeats: t.totalSeats != null ? String(t.totalSeats) : '',
   imageUrl: t.imageUrl ?? '',
   shortDescription: t.shortDescription ?? '',
+  notes: t.notes ?? '',
+  gallery: (t.gallery ?? []).join('\n'),
   status: t.status ?? 'ACTIVE',
+  region: t.region ?? 'DOMESTIC',
 })
 
 function validate(f, days) {
@@ -96,12 +106,65 @@ function validate(f, days) {
   if (f.adultPrice === '' || !(adult > 0)) e.adultPrice = 'Giá người lớn phải lớn hơn 0.'
   if (f.childPrice === '' || child < 0) e.childPrice = 'Giá trẻ em không được âm.'
   else if (!e.adultPrice && child > adult) e.childPrice = 'Giá trẻ em không được cao hơn giá người lớn.'
+  if (f.promoPrice !== '') {
+    const promo = Number(f.promoPrice)
+    if (!(promo > 0)) e.promoPrice = 'Giá khuyến mãi phải lớn hơn 0 (hoặc để trống).'
+    else if (!e.adultPrice && promo >= adult) e.promoPrice = 'Giá khuyến mãi phải thấp hơn giá người lớn.'
+  }
   const seats = Number(f.totalSeats)
   if (f.totalSeats === '' || !Number.isInteger(seats) || seats < 1) e.totalSeats = 'Tổng số chỗ phải là số nguyên từ 1 trở lên.'
   days.forEach((d, i) => {
     if (d.body.trim() && !d.title.trim()) e[`day${d.key}`] = `Ngày ${i + 1} cần có tiêu đề.`
   })
   return e
+}
+
+/** Tải nhiều ảnh từ máy lên Cloudinary rồi trả về danh sách URL qua onAdd. */
+function GalleryUpload({ onAdd }) {
+  const toast = useToast()
+  const fileRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+
+  const pick = async (e) => {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (!files.length) return
+    setUploading(true)
+    const urls = []
+    try {
+      for (const file of files) {
+        if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+          toast.error(`Bỏ qua ${file.name}: chỉ nhận JPG, PNG hoặc WebP.`)
+          continue
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`Bỏ qua ${file.name}: vượt quá 5MB.`)
+          continue
+        }
+        urls.push((await uploadImage(file)).url)
+      }
+      if (urls.length) {
+        onAdd(urls)
+        toast.success(`Đã tải ${urls.length} ảnh lên.`)
+      }
+    } catch (err) {
+      if (urls.length) onAdd(urls)
+      toast.error(getErrorMessage(err, 'Không tải được ảnh lên.'))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="img-field__row">
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={pick} />
+      <button type="button" className="btn btn-outline btn-sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
+        {uploading ? <span className="spinner" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}
+        {uploading ? 'Đang tải lên…' : 'Tải ảnh từ máy'}
+      </button>
+      <span className="field-hint">Có thể chọn nhiều ảnh cùng lúc.</span>
+    </div>
+  )
 }
 
 function ImageField({ value, onChange, error }) {
@@ -120,7 +183,7 @@ function ImageField({ value, onChange, error }) {
     if (file.size > 5 * 1024 * 1024) return toast.error('Ảnh vượt quá 5MB, hãy chọn ảnh nhỏ hơn.')
     setUploading(true)
     try {
-      const { url } = await adminApi.upload(file)
+      const { url } = await uploadImage(file)
       onChange(url)
       toast.success('Đã tải ảnh lên.')
     } catch (err) {
@@ -260,12 +323,16 @@ function TourModal({ id, categories, onClose, onSaved }) {
       transport: form.transport.trim(),
       departureDate: fromLocalInput(form.departureDate),
       adultPrice: Number(form.adultPrice),
+      promoPrice: form.promoPrice === '' ? null : Number(form.promoPrice),
       childPrice: Number(form.childPrice),
       totalSeats: Number(form.totalSeats),
       imageUrl: form.imageUrl.trim() || null,
       shortDescription: form.shortDescription.trim(),
       itinerary: rowsToItinerary(days),
+      notes: form.notes.trim(),
+      gallery: form.gallery,
       status: form.status,
+      region: form.region,
     }
     setSaving(true)
     try {
@@ -325,9 +392,15 @@ function TourModal({ id, categories, onClose, onSaved }) {
 
           <section className="form-section" aria-label="Thông tin chung">
             <h3>Thông tin chung</h3>
-            <div className="form-row">
+            <div className="form-row form-row-3">
               <Field label="Mã tour" required error={errors.tourCode} hint="Duy nhất, ví dụ DN-0612.">
                 <input className="input" value={form.tourCode} onChange={set('tourCode')} maxLength={30} autoFocus autoComplete="off" />
+              </Field>
+              <Field label="Phạm vi" required hint="Quyết định tour hiện ở mục Tour trong nước hay Tour nước ngoài.">
+                <select className="input" value={form.region} onChange={set('region')}>
+                  <option value="DOMESTIC">Trong nước</option>
+                  <option value="INTERNATIONAL">Nước ngoài</option>
+                </select>
               </Field>
               <Field label="Danh mục" required error={errors.categoryId}>
                 <select className="input" value={form.categoryId} onChange={set('categoryId')}>
@@ -393,6 +466,9 @@ function TourModal({ id, categories, onClose, onSaved }) {
               <Field label="Giá người lớn (đ)" required error={errors.adultPrice} hint={Number(form.adultPrice) > 0 ? money(form.adultPrice) : undefined}>
                 <input className="input" type="number" min="0" step="1000" inputMode="numeric" value={form.adultPrice} onChange={set('adultPrice')} />
               </Field>
+              <Field label="Giá khuyến mãi (đ)" error={errors.promoPrice} hint={form.promoPrice !== '' && Number(form.promoPrice) > 0 ? money(form.promoPrice) : 'Không bắt buộc. Thấp hơn giá người lớn.'}>
+                <input className="input" type="number" min="0" step="1000" inputMode="numeric" value={form.promoPrice} onChange={set('promoPrice')} />
+              </Field>
               <Field label="Giá trẻ em (đ)" required error={errors.childPrice} hint={form.childPrice !== '' && Number(form.childPrice) >= 0 ? money(form.childPrice) : 'Không cao hơn giá người lớn.'}>
                 <input className="input" type="number" min="0" step="1000" inputMode="numeric" value={form.childPrice} onChange={set('childPrice')} />
               </Field>
@@ -412,11 +488,30 @@ function TourModal({ id, categories, onClose, onSaved }) {
             <ImageField value={form.imageUrl} onChange={(v) => setForm((f) => ({ ...f, imageUrl: v }))} error={errors.imageUrl} />
           </section>
 
+          <section className="form-section" aria-label="Thư viện ảnh">
+            <h3>Thư viện ảnh</h3>
+            <p className="form-section__intro">Ảnh bổ sung hiển thị dưới ảnh đại diện ở trang chi tiết. Mỗi dòng một đường dẫn ảnh (tối đa 12).</p>
+            <GalleryUpload onAdd={(urls) => setForm((f) => ({ ...f, gallery: [f.gallery.trim(), ...urls].filter(Boolean).join('\n') }))} />
+            <Field label="Đường dẫn ảnh" error={errors.gallery}>
+              <textarea className="input" rows={4} value={form.gallery} onChange={set('gallery')} maxLength={6000} placeholder="https://…/anh-1.jpg" />
+            </Field>
+          </section>
+
           <section className="form-section" aria-label="Lịch trình">
             <h3>Lịch trình theo ngày</h3>
             <p className="form-section__intro">Số ngày được đánh tự động theo thứ tự. Dùng mũi tên để đổi vị trí.</p>
             <ItineraryEditor days={days} setDays={setDays} errors={errors} />
             {errors.itinerary && <span className="field-error">{errors.itinerary}</span>}
+          </section>
+
+          <section className="form-section" aria-label="Giá bao gồm và lưu ý">
+            <h3>Giá bao gồm &amp; lưu ý</h3>
+            <p className="form-section__intro">
+              Mỗi mục gồm một dòng tiêu đề (ví dụ “Giá tour bao gồm”), các dòng nội dung bên dưới, và cách mục khác bằng một dòng trống.
+            </p>
+            <Field label="Nội dung" error={errors.notes}>
+              <textarea className="input" rows={8} value={form.notes} onChange={set('notes')} maxLength={20000} />
+            </Field>
           </section>
         </form>
       )}
@@ -560,7 +655,6 @@ export default function AdminTours() {
     <>
       <div className="admin-head">
         <div>
-          <span className="eyebrow">Sản phẩm</span>
           <h1>Quản lý tour</h1>
           <p>Thêm tour, cập nhật giá, số chỗ, lịch trình và đóng/mở bán nhanh ngay trên danh sách.</p>
         </div>
@@ -666,6 +760,7 @@ export default function AdminTours() {
                       <td className="nowrap num">{fmtDateTime(t.departureDate)}</td>
                       <td className="r num nowrap">
                         {money(t.adultPrice)}
+                        {t.originalPrice > 0 && <span className="cell-sub">Gốc {money(t.originalPrice)}</span>}
                         <span className="cell-sub">Trẻ em {money(t.childPrice)}</span>
                       </td>
                       <td className="r num nowrap">

@@ -55,7 +55,6 @@ function Hero() {
         ))}
       </div>
       <div className="container hero__inner">
-        <span className="eyebrow">Tour trong nước &amp; quốc tế</span>
         <h1>
           Những chuyến đi đáng để <em>kể lại</em>
         </h1>
@@ -118,7 +117,6 @@ function Destinations() {
       <div className="container">
         <div className="section-head">
           <div>
-            <span className="eyebrow">Điểm đến</span>
             <h2>Nơi mọi người đang muốn đi</h2>
           </div>
           <Link className="link-arrow" to="/tours">
@@ -150,7 +148,6 @@ function Featured() {
       <div className="container">
         <div className="section-head">
           <div>
-            <span className="eyebrow">Sắp khởi hành</span>
             <h2>Chọn chỗ trước khi hết</h2>
           </div>
           <Link className="link-arrow" to="/tours?sort=departureAsc">
@@ -187,7 +184,6 @@ export default function Home() {
       <section className="page" style={{ paddingBottom: 0 }}>
         <div className="container promise">
           <div>
-            <span className="eyebrow">Cam kết</span>
             <h2>Đặt tour không nên là một cuộc đoán mò</h2>
             <p className="lead">Ba điều chúng tôi giữ nhất quán ở mọi tour trên trang.</p>
           </div>
@@ -209,7 +205,6 @@ export default function Home() {
         <div className="container">
           <div className="section-head">
             <div>
-              <span className="eyebrow">Quy trình</span>
               <h2>Từ chọn tour đến lên đường</h2>
             </div>
           </div>

@@ -1,5 +1,6 @@
 package com.tourdulich.service;
 
+import com.tourdulich.ai.TourChangedEvent;
 import com.tourdulich.dto.admin.TourRequest;
 import com.tourdulich.dto.common.PageResponse;
 import com.tourdulich.dto.tour.TourDetail;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,7 @@ public class AdminTourService {
     private final CategoryRepository categoryRepository;
     private final BookingItemRepository bookingItemRepository;
     private final TourService tourService;
+    private final ApplicationEventPublisher events;
 
     @Transactional(readOnly = true)
     public PageResponse<TourSummary> list(int page, int size, String keyword, Long categoryId, TourStatus status) {
@@ -74,6 +77,7 @@ public class AdminTourService {
         t.setAvailableSeats(req.totalSeats());
         t.setStatus(req.status() == null ? TourStatus.ACTIVE : req.status());
         tourRepository.saveAndFlush(t);
+        events.publishEvent(new TourChangedEvent(t.getId())); // cập nhật chỉ mục AI sau khi commit
         return tourService.toDetailWithRelated(t);
     }
 
@@ -98,6 +102,7 @@ public class AdminTourService {
             t.setStatus(req.status());
         }
         tourRepository.saveAndFlush(t);
+        events.publishEvent(new TourChangedEvent(t.getId()));
         return tourService.toDetailWithRelated(t);
     }
 
@@ -107,6 +112,7 @@ public class AdminTourService {
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy tour du lịch"));
         t.setStatus(status);
         tourRepository.save(t);
+        events.publishEvent(new TourChangedEvent(t.getId()));
         return TourMapper.toSummary(t);
     }
 
@@ -119,6 +125,7 @@ public class AdminTourService {
                     "Tour này đã có khách đặt chỗ, không được phép xóa để đảm bảo toàn vẹn dữ liệu đơn hàng!");
         }
         tourRepository.delete(t);
+        events.publishEvent(new TourChangedEvent(id));
     }
 
     private void apply(Tour t, TourRequest req, String code) {
@@ -133,12 +140,28 @@ public class AdminTourService {
         t.setDuration(Texts.blankToNull(req.duration()));
         t.setTransport(Texts.blankToNull(req.transport()));
         t.setDepartureDate(req.departureDate());
+        if (req.promoPrice() != null && req.promoPrice().compareTo(req.adultPrice()) >= 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Dữ liệu không hợp lệ",
+                    Map.of("promoPrice", "Giá khuyến mãi phải thấp hơn giá vé người lớn"));
+        }
         t.setAdultPrice(req.adultPrice());
+        t.setPromoPrice(req.promoPrice());
         t.setChildPrice(req.childPrice());
         t.setTotalSeats(req.totalSeats());
         t.setImageUrl(Texts.blankToNull(req.imageUrl()));
         t.setShortDescription(Texts.blankToNull(req.shortDescription()));
+        if (req.region() != null) {
+            t.setRegion(req.region());
+        }
         t.setItinerary(Texts.blankToNull(req.itinerary()));
+        if (req.notes() != null) { // client cũ không gửi notes thì giữ nguyên
+            t.setNotes(Texts.blankToNull(req.notes()));
+        }
+        if (req.gallery() != null) {
+            String lines = java.util.Arrays.stream(req.gallery().split("\\R")).map(String::trim)
+                    .filter(x -> !x.isEmpty()).collect(java.util.stream.Collectors.joining("\n"));
+            t.setGalleryUrls(Texts.blankToNull(lines));
+        }
     }
 
     private static ApiException duplicateCode() {

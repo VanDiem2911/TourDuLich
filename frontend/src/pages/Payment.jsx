@@ -98,8 +98,8 @@ export default function Payment() {
   return (
     <div className="container">
       <header className="page-head">
-        <span className="eyebrow">Đơn {info.bookingCode}</span>
         <h1>{paid ? 'Đã nhận thanh toán' : 'Thanh toán chuyển khoản'}</h1>
+        <p className="muted num" style={{ marginBottom: 'var(--s2)' }}>Đơn {info.bookingCode}</p>
         <p>
           {paid
             ? `Chúng tôi đã nhận ${money(info.amount)}${info.paidAt ? ` lúc ${fmtDateTime(info.paidAt)}` : ''}. Cảm ơn bạn!`

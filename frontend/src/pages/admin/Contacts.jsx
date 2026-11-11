@@ -224,7 +224,6 @@ export default function AdminContacts() {
     <>
       <div className="admin-head">
         <div>
-          <span className="eyebrow">Hộp thư</span>
           <h1>Liên hệ từ khách</h1>
           <p>Đọc, phản hồi và theo dõi các tin nhắn gửi từ trang liên hệ.</p>
         </div>

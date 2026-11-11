@@ -4,3 +4,14 @@ spring:
   datasource:
     username: root
     password: sapassword
+  # --- Trợ lý AI (Gemini): bỏ comment khối dưới và dán API key (lấy tại https://aistudio.google.com/apikey) ---
+  # ai:
+  #   model:
+  #     chat: google-genai
+  #     embedding:
+  #       text: google-genai
+  #   google:
+  #     genai:
+  #       api-key: DAN_API_KEY_VAO_DAY
+  #       embedding:
+  #         api-key: DAN_API_KEY_VAO_DAY

@@ -73,3 +73,8 @@ Vite proxy `/api` sang `http://localhost:8080` nên không vướng CORS và coo
 | 3. Giỏ tour và đặt tour | Chưa làm |
 | 4-6. Giao diện khách, tài khoản, Admin | Khung layout và route đã có, trang chức năng là trang khung |
 | 7. Liên hệ, thanh toán chuyển khoản QR + webhook | Bảng CSDL đã có, chưa có code |
+
+## Trợ lý AI và User Tracking
+
+Khung chat "Trợ lý TourDuLich" (Spring AI + Gemini, RAG trên vector store) và cơ chế ghi nhận hành vi người dùng:
+xem [docs/AI_CHATBOT_VA_USER_TRACKING.md](docs/AI_CHATBOT_VA_USER_TRACKING.md). Điền `GEMINI_API_KEY` (và `GEMINI_API_KEY_2`... làm key dự phòng) trong `backend/.env` là trợ lý tự bật.

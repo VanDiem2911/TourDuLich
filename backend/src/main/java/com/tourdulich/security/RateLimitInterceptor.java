@@ -40,7 +40,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             new Rule("POST", "/api/auth/register", 5),
             new Rule("POST", "/api/auth/refresh", 10),
             new Rule("POST", "/api/bookings", 10),
-            new Rule("POST", "/api/contacts", 5, Duration.ofHours(1))
+            new Rule("POST", "/api/contacts", 5, Duration.ofHours(1)),
+            new Rule("POST", "/api/ai/chat", 15),          // mỗi câu hỏi tốn một lần gọi Gemini
+            new Rule("POST", "/api/tracking/events", 90)   // frontend gom sự kiện theo lô nên ít request
     );
 
     private static final int MAX_TRACKED_BUCKETS = 10_000;

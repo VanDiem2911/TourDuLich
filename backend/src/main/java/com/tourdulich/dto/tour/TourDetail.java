@@ -1,5 +1,6 @@
 package com.tourdulich.dto.tour;
 
+import com.tourdulich.entity.enums.TourRegion;
 import com.tourdulich.entity.enums.TourStatus;
 
 import java.time.LocalDateTime;
@@ -24,13 +25,18 @@ public record TourDetail(
         String imageUrl,
         String shortDescription,
         TourStatus status,
+        TourRegion region,
+        long originalPrice,
         String itinerary,
+        String notes,
+        List<String> gallery,
         List<TourSummary> relatedTours) {
 
-    public static TourDetail of(TourSummary s, String itinerary, List<TourSummary> related) {
+    public static TourDetail of(TourSummary s, String itinerary, String notes, List<String> gallery,
+                                List<TourSummary> related) {
         return new TourDetail(s.id(), s.tourCode(), s.name(), s.categoryId(), s.categoryName(),
                 s.departureLocation(), s.destination(), s.duration(), s.transport(), s.departureDate(),
                 s.adultPrice(), s.childPrice(), s.totalSeats(), s.availableSeats(), s.imageUrl(),
-                s.shortDescription(), s.status(), itinerary, related);
+                s.shortDescription(), s.status(), s.region(), s.originalPrice(), itinerary, notes, gallery, related);
     }
 }

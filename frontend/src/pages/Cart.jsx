@@ -7,6 +7,7 @@ import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { getErrorMessage } from '../api/client'
 import { fmtDate, money } from '../utils/format'
+import { track } from '../tracking/tracker'
 
 function Qty({ label, value, min, max, disabled, onChange }) {
   return (
@@ -49,7 +50,10 @@ export default function Cart() {
     setConfirm(null)
     try {
       if (c.type === 'all') await clear()
-      else await remove(c.item.tourId)
+      else {
+        await remove(c.item.tourId)
+        track('remove_from_cart', { tourId: c.item.tourId })
+      }
     } catch (e) {
       toast.error(getErrorMessage(e))
     }
@@ -87,7 +91,6 @@ export default function Cart() {
   return (
     <div className="container">
       <header className="page-head">
-        <span className="eyebrow">Phiếu đặt tạm</span>
         <h1>Hành trình đã chọn</h1>
         <p>Kiểm tra lại số lượng trước khi xác nhận. Giá cuối cùng được tính lại ở máy chủ khi đặt tour.</p>
       </header>

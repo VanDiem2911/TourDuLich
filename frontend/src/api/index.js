@@ -9,12 +9,18 @@ const del = (url) => api.delete(url).then((r) => r.data)
 const clean = (o = {}) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== '' && v != null))
 
 export const publicApi = {
-  categories: () => get('/categories'),
+  categories: (params) => get('/categories', clean(params)),
   tours: (params) => get('/tours', clean(params)),
   featured: (limit = 6) => get('/tours/featured', { limit }),
   destinations: () => get('/tours/destinations'),
   tour: (id) => get(`/tours/${id}`),
   sendContact: (body) => post('/contacts', body),
+}
+
+/** Trợ lý AI. Gemini có thể trả lời chậm hơn các API khác nên đặt timeout riêng 60 giây. */
+export const aiApi = {
+  status: () => get('/ai/status'),
+  chat: (body) => api.post('/ai/chat', body, { timeout: 60000 }).then((r) => r.data),
 }
 
 export const cartApi = {
@@ -40,7 +46,16 @@ export const accountApi = {
 }
 
 export const adminApi = {
-  stats: () => get('/admin/dashboard/stats'),
+  trackingSummary: (days = 7) => get('/admin/tracking/summary', { days }),
+  aiStatus: () => get('/admin/ai/status'),
+  aiKeys: () => get('/admin/ai/keys'),
+  aiPreview: () => get('/admin/ai/preview'),
+  aiChats: (params) => get('/admin/ai/chats', clean(params)),
+  aiChatStats: (days = 7) => get('/admin/ai/chats/stats', { days }),
+  aiChat: (id) => get(`/admin/ai/chats/${encodeURIComponent(id)}`),
+  aiChatDelete: (id) => del(`/admin/ai/chats/${encodeURIComponent(id)}`),
+  aiReindex: () => api.post('/admin/ai/reindex', null, { timeout: 120000 }).then((r) => r.data),
+  stats: (period) => get('/admin/dashboard/stats', clean({ period })),
 
   categories: (params) => get('/admin/categories', clean(params)),
   categoryOptions: () => get('/admin/categories/options'),

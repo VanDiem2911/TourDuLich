@@ -3,6 +3,7 @@ package com.tourdulich.config;
 import com.tourdulich.entity.*;
 import com.tourdulich.entity.enums.*;
 import com.tourdulich.repository.*;
+import com.tourdulich.service.TourMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -240,14 +241,14 @@ public class DemoDataSeeder implements CommandLineRunner {
     }
 
     private BigDecimal addItem(Booking b, Tour t, int adult, int child) {
-        BigDecimal childPrice = t.getChildPrice() != null ? t.getChildPrice() : t.getAdultPrice();
-        BigDecimal subtotal = t.getAdultPrice().multiply(BigDecimal.valueOf(adult))
+        BigDecimal childPrice = TourMapper.effectiveChildPrice(t);
+        BigDecimal subtotal = t.effectiveAdultPrice().multiply(BigDecimal.valueOf(adult))
                 .add(childPrice.multiply(BigDecimal.valueOf(child)));
         BookingItem item = new BookingItem();
         item.setTour(t);
         item.setTourName(t.getName());
         item.setDepartureDate(t.getDepartureDate());
-        item.setAdultPrice(t.getAdultPrice());
+        item.setAdultPrice(t.effectiveAdultPrice());
         item.setChildPrice(childPrice);
         item.setAdultQuantity(adult);
         item.setChildQuantity(child);

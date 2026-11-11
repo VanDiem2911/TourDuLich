@@ -15,3 +15,6 @@ Thumbs.db
 
 # Công cụ
 .claude/
+
+# Office lock files
+~$*

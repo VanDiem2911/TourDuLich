@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Dev server proxy /api -> Spring Boot (8080): cùng origin nên cookie JSESSIONID (Session Cart) hoạt động
+const API = process.env.API_PROXY || 'http://localhost:8080'
+
+// Dev server proxy /api -> Spring Boot (mặc định 8080, đổi bằng biến môi trường API_PROXY): cùng origin nên cookie JSESSIONID (Session Cart) hoạt động
 // mà không vướng CORS.
 export default defineConfig({
   plugins: [react()],
@@ -9,12 +11,12 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: API,
         changeOrigin: false,
       },
       // Ảnh do Admin tải lên được backend phục vụ tại /uploads
       '/uploads': {
-        target: 'http://localhost:8080',
+        target: API,
         changeOrigin: false,
       },
     },

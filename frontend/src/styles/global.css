@@ -31,8 +31,8 @@
   --info: #2c5a73;
   --info-soft: #dde9ee;
 
-  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
-  --font-body: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Noto Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Noto Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --r: 3px;
   --r-lg: 6px;
@@ -70,12 +70,12 @@ body {
 h1, h2, h3, h4 {
   margin: 0 0 var(--s3);
   font-family: var(--font-display);
-  font-weight: 500;
-  line-height: 1.15;
+  font-weight: 600;
+  line-height: 1.25;
   letter-spacing: -0.01em;
   text-wrap: balance;
 }
-h1 { font-size: clamp(2.2rem, 5.2vw, 4.2rem); font-weight: 400; }
+h1 { font-size: clamp(2.2rem, 5.2vw, 4.2rem); font-weight: 700; }
 h2 { font-size: clamp(1.7rem, 3.4vw, 2.6rem); }
 h3 { font-size: 1.3rem; }
 h4 { font-size: 1.05rem; }
@@ -101,14 +101,6 @@ img { max-width: 100%; display: block; }
 .page { padding: var(--s7) 0 var(--s8); }
 .page--tight { padding-top: var(--s5); }
 
-/* Nhãn nhỏ viết hoa - dùng thay cho badge nhiều màu */
-.eyebrow {
-  display: inline-block;
-  font: 600 0.74rem var(--font-body);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--clay-deep);
-}
 .lead { font-size: 1.15rem; color: var(--ink-soft); max-width: 58ch; }
 .muted { color: var(--muted); }
 .rule { border: 0; border-top: 1px solid var(--line); margin: var(--s6) 0; }
@@ -119,7 +111,6 @@ img { max-width: 100%; display: block; }
   margin-bottom: var(--s6); padding-bottom: var(--s4); border-bottom: 1px solid var(--ink);
 }
 .section-head h2 { margin: 0; }
-.section-head .eyebrow { margin-bottom: var(--s2); display: block; }
 .link-arrow { font-weight: 600; text-decoration: none; white-space: nowrap; display: inline-flex; gap: var(--s2); align-items: center; color: var(--ink); }
 .link-arrow:hover { color: var(--clay); }
 .link-arrow svg { transition: transform 200ms var(--ease); }
@@ -294,7 +285,6 @@ textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
 .hero__inner { padding-block: var(--s9) var(--s8); width: 100%; }
 .hero h1 { color: #fff; max-width: 15ch; margin-bottom: var(--s4); }
 .hero h1 em { font-style: italic; color: #f2cf8a; }
-.hero .eyebrow { color: #f2cf8a; margin-bottom: var(--s4); }
 .hero__lead { font-size: 1.15rem; max-width: 52ch; color: #ece7d9; margin-bottom: var(--s6); }
 .hero__dots { position: absolute; right: var(--s5); bottom: var(--s5); display: flex; gap: var(--s2); }
 .hero__dots button { width: 28px; height: 3px; padding: 0; border: 0; background: rgb(255 255 255 / 0.4); cursor: pointer; }
@@ -366,6 +356,16 @@ textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
 .tour-card__foot { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); margin-top: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--line); font-size: 0.85rem; color: var(--muted); }
 .price { font: 500 1.35rem var(--font-display); color: var(--ink); white-space: nowrap; }
 .price small { font: 400 0.78rem var(--font-body); color: var(--muted); margin-right: 4px; }
+.price__old { display: block; font: 400 0.85rem var(--font-body); color: var(--muted); }
+.badge-sale { display: inline-block; margin-left: var(--s2); padding: 2px 8px; border-radius: var(--r); background: var(--clay); color: var(--on-clay); font: 700 0.72rem var(--font-body); vertical-align: middle; }
+.tour-card__stamp--sale { top: auto; bottom: var(--s3); background: var(--clay); color: var(--on-clay); }
+
+/* Thư viện ảnh trang chi tiết tour */
+.gallery { display: flex; gap: var(--s2); margin-top: var(--s2); overflow-x: auto; padding-bottom: 2px; }
+.gallery__thumb { flex: none; width: 88px; height: 62px; padding: 0; border: 2px solid transparent; border-radius: var(--r); overflow: hidden; background: var(--paper-2); cursor: pointer; opacity: 0.75; }
+.gallery__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.gallery__thumb:hover { opacity: 1; }
+.gallery__thumb[aria-pressed="true"] { border-color: var(--ink); opacity: 1; }
 
 /* ------------------------------- Tours page ----------------------------- */
 .page-head { padding: var(--s7) 0 var(--s6); border-bottom: 1px solid var(--ink); margin-bottom: var(--s6); }
@@ -423,6 +423,22 @@ textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
 .timeline__day b { display: block; font: 400 2.4rem var(--font-display); letter-spacing: 0; color: var(--ink); line-height: 1; }
 .timeline h3 { margin-bottom: var(--s2); font-size: 1.2rem; }
 .timeline p { margin: 0; color: var(--ink-soft); }
+
+/* Giá tour bao gồm / không bao gồm, giấy tờ, quy định hủy: mỗi mục một khối thu gọn được */
+.notes { margin-top: var(--s7); }
+.notes details { border-top: 1px solid var(--line); }
+.notes details:last-child { border-bottom: 1px solid var(--line); }
+.notes summary {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s3);
+  min-height: 48px; padding: var(--s3) 0; cursor: pointer; list-style: none;
+  font: 600 1.05rem var(--font-body); color: var(--ink);
+}
+.notes summary::-webkit-details-marker { display: none; }
+.notes summary svg { flex: none; color: var(--muted); transition: transform 0.2s ease; }
+.notes details[open] summary svg { transform: rotate(180deg); }
+.notes__body { padding: 0 0 var(--s4); color: var(--ink-soft); }
+.notes__body p { margin: 0 0 var(--s2); }
+@media (prefers-reduced-motion: reduce) { .notes summary svg { transition: none; } }
 
 .booking-box { position: sticky; top: calc(var(--header-h) + var(--s4)); background: var(--card); border: 1px solid var(--ink); border-radius: var(--r-lg); padding: var(--s5); }
 .booking-box .price { font-size: 2rem; }
@@ -490,6 +506,9 @@ textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
 .auth-wrap { display: grid; place-items: start center; padding: var(--s7) 0; }
 
 .contact-layout { display: grid; grid-template-columns: 5fr 7fr; gap: var(--s8); align-items: start; }
+.contact-side { display: grid; gap: var(--s6); }
+.contact-map { display: grid; gap: var(--s3); }
+.contact-map iframe { width: 100%; height: 280px; border: 1px solid var(--line-strong); border-radius: var(--r-lg); background: var(--paper-2); }
 .contact-info { display: grid; gap: var(--s5); }
 .contact-info div { padding-top: var(--s4); border-top: 1px solid var(--line); }
 .contact-info dt, .contact-info .cap { font: 600 0.68rem var(--font-body); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }

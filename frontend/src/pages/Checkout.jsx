@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { bookingApi } from '../api'
 import { getErrorMessage, getFieldErrors } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { fmtDate, money } from '../utils/format'
+import { track } from '../tracking/tracker'
 
 const PHONE_RE = /^(0|\+84)[0-9]{9,10}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -13,6 +14,9 @@ export default function Checkout() {
   const { user } = useAuth()
   const { cart, loading, refresh } = useCart()
   const navigate = useNavigate()
+  useEffect(() => {
+    track('begin_checkout')
+  }, [])
   const [form, setForm] = useState({
     contactName: user?.fullName || '',
     contactPhone: user?.phone || '',
@@ -73,7 +77,6 @@ export default function Checkout() {
   return (
     <div className="container">
       <header className="page-head">
-        <span className="eyebrow">Bước cuối</span>
         <h1>Xác nhận đặt tour</h1>
         <p>Điền thông tin người liên hệ. Sau khi xác nhận, chỗ sẽ được giữ và bạn có thể thanh toán ngay.</p>
       </header>

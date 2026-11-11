@@ -1,5 +1,6 @@
 package com.tourdulich.dto.admin;
 
+import com.tourdulich.entity.enums.TourRegion;
 import com.tourdulich.entity.enums.TourStatus;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -42,6 +43,10 @@ public record TourRequest(
         @DecimalMin(value = "0", message = "Giá vé trẻ em không được âm")
         BigDecimal childPrice,
 
+        /** Giá khuyến mãi người lớn (tùy chọn): phải lớn hơn 0 và thấp hơn giá vé người lớn. */
+        @DecimalMin(value = "0", inclusive = false, message = "Giá khuyến mãi phải lớn hơn 0")
+        BigDecimal promoPrice,
+
         @NotNull(message = "Vui lòng nhập tổng số chỗ")
         @Min(value = 1, message = "Tổng số chỗ phải từ 1 trở lên")
         Integer totalSeats,
@@ -55,5 +60,15 @@ public record TourRequest(
         @Size(max = 20000, message = "Lịch trình quá dài")
         String itinerary,
 
-        TourStatus status) {
+        @Size(max = 20000, message = "Ghi chú quá dài")
+        String notes,
+
+        /** Ảnh bổ sung: mỗi dòng một đường dẫn. */
+        @Size(max = 6000, message = "Danh sách ảnh quá dài")
+        String gallery,
+
+        TourStatus status,
+
+        /** Trong nước / nước ngoài; bỏ trống thì giữ nguyên (tour mới mặc định trong nước). */
+        TourRegion region) {
 }

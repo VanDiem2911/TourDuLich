@@ -64,6 +64,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/tours/**", "/api/categories/**", "/uploads/**").permitAll()
                         .requestMatchers("/api/cart/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/contacts").permitAll()
+                        // Trợ lý AI và ghi nhận hành vi người dùng: công khai (có giới hạn tốc độ theo IP)
+                        .requestMatchers(HttpMethod.GET, "/api/ai/status").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/ai/chat", "/api/tracking/events").permitAll()
                         // Webhook ngân hàng: xác thực bằng API key riêng trong controller, không dùng JWT
                         .requestMatchers(HttpMethod.POST, "/api/payments/webhook").permitAll()
 

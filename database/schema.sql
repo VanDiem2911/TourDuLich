@@ -58,18 +58,23 @@ CREATE TABLE IF NOT EXISTS tours (
     departure_date     DATETIME      NULL,
     adult_price        DECIMAL(15,2) NOT NULL,
     child_price        DECIMAL(15,2) NULL,
+    promo_price        DECIMAL(15,2) NULL,                        -- giá khuyến mãi người lớn (nếu có, phải < adult_price)
     total_seats        INT           NOT NULL,
     available_seats    INT           NOT NULL,
     image_url          VARCHAR(500)  NULL,
     short_description  VARCHAR(500)  NULL,
     itinerary          TEXT          NULL,
+    gallery_urls       TEXT          NULL,                        -- ảnh bổ sung, mỗi dòng một URL
+    notes              TEXT          NULL,                        -- giá bao gồm / không bao gồm, giấy tờ, quy định hủy
     status             VARCHAR(20)   NOT NULL DEFAULT 'ACTIVE',   -- ACTIVE / CLOSED / COMPLETED
+    region             VARCHAR(20)   NOT NULL DEFAULT 'DOMESTIC', -- DOMESTIC (trong nước) / INTERNATIONAL (nước ngoài)
     created_at         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uk_tours_code (tour_code),
     KEY idx_tours_category (category_id),
     KEY idx_tours_status_departure (status, departure_date),
+    KEY idx_tours_region (region),
     CONSTRAINT fk_tours_category FOREIGN KEY (category_id) REFERENCES categories (id)
 ) ENGINE = InnoDB;
 
@@ -168,4 +173,72 @@ CREATE TABLE IF NOT EXISTS payment_transactions (
     KEY idx_payment_tx_booking (booking_id),
     KEY idx_payment_tx_match (match_status),
     CONSTRAINT fk_payment_tx_booking FOREIGN KEY (booking_id) REFERENCES bookings (id)
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- Bảng mở rộng - ghi nhận hành vi người dùng trên giao diện (user tracking)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_events (
+    id           BIGINT       NOT NULL AUTO_INCREMENT,
+    anonymous_id VARCHAR(64)  NOT NULL,                           -- mã ẩn danh lưu ở trình duyệt khách
+    session_id   VARCHAR(64)  NOT NULL,                           -- phiên truy cập (hết sau 30 phút không hoạt động)
+    user_id      BIGINT       NULL,                               -- có giá trị nếu khách đã đăng nhập lúc gửi sự kiện
+    event_type   VARCHAR(40)  NOT NULL,                           -- page_view, click, view_tour, search, add_to_cart...
+    page         VARCHAR(255) NULL,
+    target       VARCHAR(255) NULL,
+    tour_id      BIGINT       NULL,                               -- không đặt khóa ngoại: tour bị xóa vẫn giữ lịch sử
+    props        TEXT         NULL,                               -- JSON thuộc tính bổ sung
+    occurred_at  DATETIME     NOT NULL,
+    created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_events_type_time (event_type, occurred_at),
+    KEY idx_events_tour (tour_id, event_type),
+    KEY idx_events_anon (anonymous_id),
+    KEY idx_events_session (session_id)
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- Bảng mở rộng - lịch sử chat giữa khách và trợ lý AI (che email/SĐT, tự xóa sau 90 ngày)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ai_chat_logs (
+    id              BIGINT        NOT NULL AUTO_INCREMENT,
+    conversation_id VARCHAR(64)   NOT NULL,                       -- mã một cuộc trò chuyện (frontend sinh)
+    user_id         BIGINT        NULL,                           -- có giá trị nếu khách đã đăng nhập
+    question        TEXT          NOT NULL,
+    answer          MEDIUMTEXT    NULL,
+    sources         VARCHAR(255)  NULL,                           -- id các tour được nhắc tới, cách nhau bằng dấu phẩy
+    ok              TINYINT(1)    NOT NULL DEFAULT 1,
+    error           VARCHAR(300)  NULL,
+    latency_ms      INT           NULL,
+    model           VARCHAR(120)  NULL,                           -- key/mô hình đã trả lời (key đã che)
+    on_tour_id      BIGINT        NULL,                           -- tour khách đang xem lúc hỏi
+    created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_chat_conv (conversation_id, id),
+    KEY idx_chat_time (created_at)
+) ENGINE = InnoDB;
+
+-- Vector của trợ lý AI (lưu dạng nhị phân; tìm kiếm chạy trong bộ nhớ) và bộ nhớ đệm embedding
+CREATE TABLE IF NOT EXISTS ai_vectors (
+    id         VARCHAR(190) NOT NULL,
+    kind       VARCHAR(20)  NOT NULL,                             -- tour / overview / doc
+    tour_id    BIGINT       NULL,
+    content    MEDIUMTEXT   NOT NULL,
+    metadata   TEXT         NULL,
+    embedding  MEDIUMBLOB   NOT NULL,                             -- float32 big-endian
+    dims       INT          NOT NULL,
+    model      VARCHAR(100) NOT NULL,
+    updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_ai_vectors_tour (tour_id),
+    KEY idx_ai_vectors_kind (kind)
+) ENGINE = InnoDB;
+
+CREATE TABLE IF NOT EXISTS ai_embedding_cache (
+    hash       CHAR(64)     NOT NULL,                             -- SHA-256(mô hình + nội dung)
+    namespace  VARCHAR(100) NOT NULL,
+    embedding  MEDIUMBLOB   NOT NULL,
+    created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (hash),
+    KEY idx_ai_cache_ns (namespace)
 ) ENGINE = InnoDB;

@@ -10,6 +10,11 @@ server:
 spring:
   application:
     name: tourdulich-backend
+  config:
+    # Nạp file .env (nếu có) như một nguồn cấu hình: chạy từ thư mục backend hoặc từ thư mục gốc project đều được
+    import:
+      - optional:file:./.env[.properties]
+      - optional:file:./backend/.env[.properties]
   autoconfigure:
     # Xác thực hoàn toàn bằng JWT + bảng users, không dùng user in-memory (mật khẩu tạm) của Spring Boot
     exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
@@ -42,7 +47,35 @@ spring:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
 
+  ai:
+    model:
+      # Các mô hình Gemini do ai/AiModelsConfiguration tự dựng cho từng API key (có dự phòng key), tự bật khi có GEMINI_API_KEY.
+      # Giữ "none" để auto-config của Spring AI không tạo thêm một bộ mô hình thứ hai.
+      chat: none
+      embedding:
+        text: none
+    google:
+      genai:
+        chat:
+          options:
+            model: ${GEMINI_CHAT_MODEL:gemini-2.5-flash}
+            temperature: 0.3
+        embedding:
+          # Giá trị giữ chỗ: auto-config embedding luôn tạo bean kết nối và đòi có key; khi AI tắt bean này không bao giờ gọi mạng.
+          api-key: ${GEMINI_API_KEY:chua-cau-hinh}
+          text:
+            options:
+              model: ${GEMINI_EMBEDDING_MODEL:gemini-embedding-001}
+              dimensions: 768
+
 app:
+  ai:
+    knowledge-dir: ${AI_KNOWLEDGE_DIR:./ai-knowledge}
+    store-path: ${AI_STORE_PATH:./data/ai/vector-store.json}
+    top-k: 10
+    similarity-threshold: 0.4
+    max-history: 8
+    max-message-chars: 1000
   cors:
     allowed-origins:
       - http://localhost:5173

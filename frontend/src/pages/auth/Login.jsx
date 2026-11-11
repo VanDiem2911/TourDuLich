@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getErrorMessage } from '../../api/client'
+import { flush, track } from '../../tracking/tracker'
 
 export default function Login() {
   const { login, isAuthenticated, isAdmin } = useAuth()
@@ -28,6 +29,8 @@ export default function Login() {
     setSubmitting(true)
     try {
       const user = await login(form.email.trim(), form.password)
+      track('login')
+      flush() // gửi ngay để backend gắn user_id của phiên vừa đăng nhập
       // Admin về Dashboard, khách hàng về trang chủ; nếu bị chuyển từ trang khác (vd. Checkout) thì quay lại đó
       navigate(from || (user.role === 'ROLE_ADMIN' ? '/admin' : '/'), { replace: true })
     } catch (err) {
@@ -46,7 +49,6 @@ export default function Login() {
       </div>
       <div className="split__form">
         <div className="auth-card">
-        <span className="eyebrow">Chào mừng trở lại</span>
         <h1>Đăng nhập</h1>
         {justRegistered && (
           <p className="alert alert-success" role="status">

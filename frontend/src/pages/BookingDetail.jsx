@@ -79,11 +79,11 @@ export default function BookingDetail() {
         <Link to="/my-bookings">Đơn đặt tour</Link> / <span aria-current="page">{b.bookingCode}</span>
       </nav>
       <header className="page-head" style={{ paddingTop: 0 }}>
-        <span className="eyebrow">Đặt lúc {fmtDateTime(b.createdAt)}</span>
         <h1 className="num">{b.bookingCode}</h1>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <StatusTag map={BOOKING_STATUS} value={b.bookingStatus} />
           <StatusTag map={PAYMENT_STATUS} value={b.paymentStatus} />
+          <span className="muted">Đặt lúc {fmtDateTime(b.createdAt)}</span>
         </div>
       </header>
 

@@ -5,6 +5,7 @@ import com.tourdulich.dto.tour.CategoryResponse;
 import com.tourdulich.dto.tour.DestinationResponse;
 import com.tourdulich.dto.tour.TourDetail;
 import com.tourdulich.dto.tour.TourSummary;
+import com.tourdulich.entity.enums.TourRegion;
 import com.tourdulich.service.TourService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -26,8 +27,8 @@ public class TourController {
     private final TourService tourService;
 
     @GetMapping("/api/categories")
-    public List<CategoryResponse> categories() {
-        return tourService.listCategories();
+    public List<CategoryResponse> categories(@RequestParam(required = false) TourRegion region) {
+        return tourService.listCategories(region);
     }
 
     @GetMapping("/api/tours")
@@ -37,12 +38,13 @@ public class TourController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String destination,
+            @RequestParam(required = false) TourRegion region,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureTo,
             @RequestParam(defaultValue = "newest") String sort) {
-        return tourService.search(page, size, keyword, categoryId, destination, minPrice, maxPrice,
+        return tourService.search(page, size, keyword, categoryId, destination, region, minPrice, maxPrice,
                 departureFrom, departureTo, sort);
     }
 

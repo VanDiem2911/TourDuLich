@@ -1,5 +1,6 @@
 package com.tourdulich.entity;
 
+import com.tourdulich.entity.enums.TourRegion;
 import com.tourdulich.entity.enums.TourStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -51,6 +52,14 @@ public class Tour extends BaseEntity {
     @Column(name = "child_price", precision = 15, scale = 2)
     private BigDecimal childPrice;
 
+    /** Giá khuyến mãi người lớn (tùy chọn). Chỉ có hiệu lực khi lớn hơn 0 và thấp hơn adultPrice. */
+    @Column(name = "promo_price", precision = 15, scale = 2)
+    private BigDecimal promoPrice;
+
+    /** Ảnh bổ sung của tour: mỗi dòng một đường dẫn ảnh. */
+    @Column(name = "gallery_urls", columnDefinition = "TEXT")
+    private String galleryUrls;
+
     @Column(name = "total_seats", nullable = false)
     private Integer totalSeats;
 
@@ -66,7 +75,26 @@ public class Tour extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String itinerary;
 
+    /** Giá bao gồm / không bao gồm, giấy tờ, quy định hủy... (khối tiêu đề + dòng, cách nhau bằng dòng trống). */
+    @Column(columnDefinition = "TEXT")
+    private String notes;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TourStatus status = TourStatus.ACTIVE;
+
+    /** Trong nước / nước ngoài. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TourRegion region = TourRegion.DOMESTIC;
+
+    /** true nếu đang có giá khuyến mãi hợp lệ. */
+    public boolean hasPromo() {
+        return promoPrice != null && promoPrice.signum() > 0 && adultPrice != null && promoPrice.compareTo(adultPrice) < 0;
+    }
+
+    /** Giá người lớn thực tế đang bán (khuyến mãi nếu có, ngược lại là giá niêm yết) - dùng cho mọi phép tính tiền. */
+    public BigDecimal effectiveAdultPrice() {
+        return hasPromo() ? promoPrice : adultPrice;
+    }
 }

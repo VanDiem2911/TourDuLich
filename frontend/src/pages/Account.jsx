@@ -57,7 +57,6 @@ export default function Account() {
   return (
     <div className="container">
       <header className="page-head">
-        <span className="eyebrow">Tài khoản</span>
         <h1>Thông tin của bạn</h1>
         <p>{user.email}</p>
       </header>

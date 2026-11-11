@@ -1,5 +1,6 @@
 import { cloneElement, useEffect, useId, useRef, useState } from 'react'
-import { AlertTriangle, RefreshCw, Search, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { AlertTriangle, ArrowRight, RefreshCw, Search, X } from 'lucide-react'
 import { useAsync, useDebounced } from '../../hooks/useAsync'
 import { getErrorMessage, getFieldErrors } from '../../api/client'
 
@@ -289,4 +290,28 @@ export function serverFormErrors(err, conflictField) {
   if (err?.response?.status === 409 && conflictField) errors[conflictField] = message
   const hasFields = Object.keys(errors).length > 0
   return { errors, message: hasFields ? 'Vui lòng kiểm tra lại các trường được đánh dấu.' : message }
+}
+
+/** Thẻ số liệu (KPI) dùng ở Dashboard và các trang thống kê; có `to` thì cả thẻ là liên kết. */
+export function Tile({ label, value, note, to, attn, wide, goLabel }) {
+  const cls = `stat ${wide ? 'stat--wide' : ''} ${attn ? 'stat--attn' : ''}`
+  const body = (
+    <>
+      <span>{label}</span>
+      <strong className="num">{value}</strong>
+      {note && <small>{note}</small>}
+      {attn && goLabel && (
+        <em className="stat__go">
+          {goLabel} <ArrowRight size={14} aria-hidden="true" />
+        </em>
+      )}
+    </>
+  )
+  return to ? (
+    <Link to={to} className={cls}>
+      {body}
+    </Link>
+  ) : (
+    <div className={cls}>{body}</div>
+  )
 }
