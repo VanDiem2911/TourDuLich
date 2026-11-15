@@ -2,13 +2,16 @@ package com.tourdulich.ai;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.embedding.BatchingStrategy;
 import org.springframework.ai.embedding.Embedding;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.embedding.EmbeddingOptions;
 import org.springframework.ai.embedding.EmbeddingRequest;
 import org.springframework.ai.embedding.EmbeddingResponse;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -30,6 +33,8 @@ public class CachingEmbeddingModel implements EmbeddingModel, AutoCloseable {
 
     private static final int SAVE_EVERY = 25;
     private static final int MAX_QUERIES = 200;
+    /** Không chia nhỏ thêm: người gọi đã tự chia lô. */
+    private static final BatchingStrategy ONE_BATCH = documents -> List.of(documents);
 
     private final EmbeddingModel delegate;
     private final String namespace;
@@ -74,49 +79,48 @@ public class CachingEmbeddingModel implements EmbeddingModel, AutoCloseable {
         return docs.size();
     }
 
-    /**
-     * Nạp sẵn các vector đã biết (văn bản -> vector), ví dụ từ chỉ mục đã lưu, để lần lập lại chỉ mục tiếp theo không tốn token.
-     * Vector có số chiều khác với mô hình hiện tại bị bỏ qua.
-     */
-    public void seed(Map<String, float[]> textToVector) {
-        ensureLoaded();
-        int expected = delegate.dimensions();
-        int added = 0;
-        for (Map.Entry<String, float[]> e : textToVector.entrySet()) {
-            if (e.getValue().length != expected) {
-                continue;
-            }
-            String k = key(e.getKey());
-            if (docs.putIfAbsent(k, e.getValue()) == null) {
-                pending.put(k, e.getValue());
-                added++;
-            }
-        }
-        if (added > 0) {
-            log.info("Đã nạp sẵn {} vector vào bộ nhớ đệm embedding (khỏi embed lại).", added);
-            save();
-        }
-    }
-
     // ------------------------------------------------------------------ EmbeddingModel
 
+    /**
+     * Đường "tài liệu" (lập chỉ mục), cũng là hàm mà {@code VectorStore.add(...)} gọi: đệm bền xuống DB, chỉ những nội dung
+     * CHƯA có mới gọi API (gộp thành một lượt), phần còn lại lấy từ đệm.
+     */
+    @Override
+    public List<float[]> embed(List<Document> documents, EmbeddingOptions options, BatchingStrategy strategy) {
+        ensureLoaded();
+        List<float[]> result = new ArrayList<>(Collections.nCopies(documents.size(), null));
+        List<Document> missing = new ArrayList<>();
+        List<Integer> missingAt = new ArrayList<>();
+        for (int i = 0; i < documents.size(); i++) {
+            float[] cached = docs.get(key(documents.get(i).getText())); // nội dung đã mang tên tour/tài liệu ở đầu nên đủ để phân biệt
+            if (cached != null) {
+                hits.incrementAndGet();
+                result.set(i, cached);
+            } else {
+                missing.add(documents.get(i));
+                missingAt.add(i);
+            }
+        }
+        if (!missing.isEmpty()) {
+            List<float[]> fresh = delegate.embed(missing, options, strategy);
+            for (int j = 0; j < missing.size(); j++) {
+                String key = key(missing.get(j).getText());
+                docs.put(key, fresh.get(j));
+                pending.put(key, fresh.get(j));
+                result.set(missingAt.get(j), fresh.get(j));
+            }
+            misses.addAndGet(missing.size());
+            if (pending.size() >= SAVE_EVERY) {
+                save();
+            }
+        }
+        return result;
+    }
+
+    /** Interface bắt buộc có hàm này; đi cùng đường "tài liệu" ở trên. */
     @Override
     public float[] embed(Document document) {
-        ensureLoaded();
-        String key = key(document.getText()); // nội dung đã mang tên tour/tài liệu ở đầu nên đủ để phân biệt
-        float[] cached = docs.get(key);
-        if (cached != null) {
-            hits.incrementAndGet();
-            return cached;
-        }
-        float[] v = delegate.embed(document);
-        misses.incrementAndGet();
-        docs.put(key, v);
-        pending.put(key, v);
-        if (pending.size() >= SAVE_EVERY) {
-            save();
-        }
-        return v;
+        return embed(List.of(document), EmbeddingOptions.builder().build(), ONE_BATCH).get(0);
     }
 
     @Override

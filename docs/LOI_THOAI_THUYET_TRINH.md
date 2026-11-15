@@ -54,7 +54,7 @@ Bây giờ nói về Spring AI. Đây là thư viện của hệ sinh thái Spri
 
 Spring AI hỗ trợ khá nhiều loại vector database. Loại đơn giản nhất là SimpleVectorStore, chạy ngay trong bộ nhớ, không cần cài thêm gì, phù hợp với dữ liệu từ vài trăm đến vài nghìn đoạn. Nếu hệ thống đã dùng PostgreSQL thì có PGvector. MariaDB từ phiên bản 11.7 trở lên cũng có kiểu dữ liệu vector riêng. Còn khi dữ liệu rất lớn thì người ta dùng các database chuyên dụng như Qdrant, Chroma hay Milvus.
 
-Với đề tài của nhóm, MariaDB đang chạy là phiên bản 11.6, tức là chưa có kiểu vector. Vì vậy nhóm chọn cách như sau: việc tìm kiếm chạy trong bộ nhớ bằng SimpleVectorStore, còn vector được lưu bền ngay trong MariaDB, ở một bảng riêng, dưới dạng dữ liệu nhị phân. Cách này không cần cài thêm dịch vụ nào, dữ liệu vẫn nằm chung trong cơ sở dữ liệu của đề tài, và mỗi lần khởi động lại ứng dụng không phải tạo lại vector từ đầu.
+Với đề tài của nhóm, MariaDB đang chạy là phiên bản 12.3, đã có kiểu dữ liệu vector. Vì vậy nhóm dùng luôn vector store chính thức của Spring AI dành cho MariaDB, tên là MariaDBVectorStore. Nhóm chỉ cần khai báo một bean, Spring AI tự tạo bảng vector_store với cột kiểu VECTOR và chỉ mục vector, rồi việc tìm kiếm theo độ gần nghĩa chạy ngay trong database. Nhờ vậy nhóm không phải tự viết phần lưu và tìm kiếm vector, dữ liệu vẫn nằm chung trong cơ sở dữ liệu của đề tài, và mỗi lần khởi động lại ứng dụng không phải tạo lại vector từ đầu.
 
 ---
 

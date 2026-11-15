@@ -58,7 +58,7 @@ spring:
       genai:
         chat:
           options:
-            model: ${GEMINI_CHAT_MODEL:gemini-2.5-flash}
+            model: ${GEMINI_CHAT_MODEL:gemini-3.5-flash}
             temperature: 0.3
         embedding:
           # Giá trị giữ chỗ: auto-config embedding luôn tạo bean kết nối và đòi có key; khi AI tắt bean này không bao giờ gọi mạng.
@@ -71,7 +71,6 @@ spring:
 app:
   ai:
     knowledge-dir: ${AI_KNOWLEDGE_DIR:./ai-knowledge}
-    store-path: ${AI_STORE_PATH:./data/ai/vector-store.json}
     top-k: 10
     similarity-threshold: 0.4
     max-history: 8

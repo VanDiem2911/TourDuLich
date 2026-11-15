@@ -37,11 +37,10 @@ public record AppProperties(Cors cors, Jwt jwt, Mail mail, Seed seed, Payment pa
 
     /**
      * Trợ lý AI (RAG). knowledgeDir: thư mục tài liệu bổ sung ngoài classpath (mỗi file .md/.txt là một tài liệu).
-     * storePath: file lưu vector (SimpleVectorStore). topK/similarityThreshold: số đoạn lấy ra và ngưỡng giống nhau tối thiểu.
+     * topK/similarityThreshold: số đoạn lấy ra và ngưỡng giống nhau tối thiểu.
      * maxHistory: số tin nhắn gần nhất được gửi kèm; maxMessageChars: độ dài tối đa mỗi tin.
      */
-    public record Ai(String knowledgeDir, String storePath, int topK, double similarityThreshold, int maxHistory,
-                     int maxMessageChars) {
+    public record Ai(String knowledgeDir, int topK, double similarityThreshold, int maxHistory, int maxMessageChars) {
     }
 
     public record Upload(String dir) {

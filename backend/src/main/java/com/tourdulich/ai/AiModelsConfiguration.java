@@ -71,14 +71,14 @@ public class AiModelsConfiguration {
     }
 
     static List<String> chatModels(Environment env) {
-        String raw = env.getProperty("GEMINI_CHAT_MODEL", "gemini-2.5-flash,gemini-3.5-flash");
+        String raw = env.getProperty("GEMINI_CHAT_MODEL", "gemini-3.5-flash");
         List<String> out = new ArrayList<>();
         for (String m : raw.split("[,;]")) {
             if (!m.isBlank() && !out.contains(m.strip())) {
                 out.add(m.strip());
             }
         }
-        return out.isEmpty() ? List.of("gemini-2.5-flash") : out;
+        return out.isEmpty() ? List.of("gemini-3.5-flash") : out;
     }
 
     @Bean

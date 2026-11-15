@@ -7,7 +7,7 @@ Tài liệu gốc nằm trong thư mục `Tài Liệu/`.
 |---|---|
 | Backend | Java 21, Spring Boot 3.5 (Web, Data JPA, Security, Validation, Mail), JWT, BCrypt, Bucket4j |
 | Frontend | React 19, Vite, React Router, Axios |
-| CSDL | MariaDB (local) |
+| CSDL | MariaDB 11.7 trở lên (khuyến nghị 12.3 LTS; trợ lý AI cần kiểu `VECTOR`) |
 
 ## Cấu trúc thư mục
 

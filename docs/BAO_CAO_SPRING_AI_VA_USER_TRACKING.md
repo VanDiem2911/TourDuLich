@@ -70,7 +70,7 @@ Spring AI là thư viện của hệ sinh thái Spring giúp tích hợp AI theo
 
 ### 1.6 Chọn gì cho đề tài
 
-Hệ thống đang chạy **MariaDB 11.6.2, chưa có kiểu `VECTOR`**. Vì vậy nhóm chọn: tìm kiếm trong bộ nhớ bằng `SimpleVectorStore`, còn **vector được lưu bền trong chính MariaDB** (bảng `ai_vectors`, dạng nhị phân). Cách này không cần cài thêm dịch vụ nào, dữ liệu vẫn nằm trong DB của đề tài, và khởi động lại không phải embed lại. Mã của project chỉ phụ thuộc interface `VectorStore` nên sau này nâng MariaDB lên 11.7 hoặc đổi sang Qdrant chỉ phải sửa chỗ dựng store.
+Hệ thống chạy **MariaDB 12.3 (LTS), đã có kiểu `VECTOR`** (từ 11.7). Vì vậy nhóm dùng luôn **`MariaDBVectorStore`, vector store chính thức của Spring AI**, thay vì tự viết phần lưu vector. Chỉ cần khai báo một bean, Spring AI tự tạo bảng `vector_store` (cột `embedding` kiểu `VECTOR(768)` có chỉ mục vector) và tìm kiếm theo độ gần nghĩa ngay trong database. Cách này không cần cài thêm dịch vụ nào, dữ liệu vẫn nằm trong DB của đề tài, và khởi động lại không phải embed lại. Mã của project chỉ phụ thuộc interface `VectorStore` nên sau này đổi sang Qdrant hay PGvector chỉ phải sửa chỗ dựng store.
 
 ---
 
@@ -126,11 +126,13 @@ Theo dõi hành vi liên quan dữ liệu cá nhân nên cần tuân thủ nguy�
 
 | Lớp | Vai trò |
 |---|---|
-| `KnowledgeBase` | **Lập chỉ mục:** dựng tài liệu từ tour và file tri thức, cắt đoạn, embed, lưu vector. Tự cập nhật khi admin sửa tour |
+| `KnowledgeDocuments` | **Dựng tài liệu cho AI đọc:** biến tour và file tri thức thành các đoạn kèm metadata |
+| `KnowledgeBase` | **Lập chỉ mục và tìm kiếm:** đưa các đoạn vào `VectorStore`, tìm đoạn gần nghĩa với câu hỏi. Tự cập nhật khi admin sửa tour |
 | `ChatService` | **Truy xuất và sinh câu trả lời:** tìm đoạn liên quan, dựng prompt, gọi Gemini, tách tour được nhắc để trả về thẻ tour |
 | `AiModelsConfiguration`, `FailoverModels`, `KeyRotation` | Dựng mô hình theo từng API key và mô hình, tự chuyển khi lỗi |
 | `CachingEmbeddingModel` | Bộ nhớ đệm embedding lưu trong DB |
-| `VectorPersistence`, `AiVectorRepository` | Lưu và nạp vector từ MariaDB |
+| `VectorStoreConfiguration` | Dựng `MariaDBVectorStore` của Spring AI (tự tạo bảng `vector_store`, tìm kiếm trong database) |
+| `JdbcEmbeddingCacheStore` | Lưu bộ nhớ đệm embedding vào bảng `ai_embedding_cache` |
 | `ChatLogRepository`, `ChatRedactor` | Lưu lịch sử chat, che thông tin cá nhân, tự xóa dữ liệu cũ |
 | `AiController`, `AiAdminController` | API cho khách và cho quản trị |
 
@@ -197,7 +199,7 @@ Máy chủ không giữ hội thoại; frontend gửi lại các lượt gần n
 | Bảng | Nội dung |
 |---|---|
 | `user_events` | Sự kiện hành vi (không có khóa ngoại tới `tours`, tour bị xóa vẫn giữ lịch sử) |
-| `ai_vectors` | Vector của từng đoạn, dạng nhị phân, kèm nội dung và metadata |
+| `vector_store` | Do `MariaDBVectorStore` (Spring AI) tự tạo: mỗi đoạn gồm id UUID, nội dung, metadata JSON và vector kiểu `VECTOR(768)` |
 | `ai_embedding_cache` | Bộ nhớ đệm embedding, khóa theo SHA-256 của nội dung và mô hình |
 | `ai_chat_logs` | Lịch sử chat theo cuộc trò chuyện |
 
