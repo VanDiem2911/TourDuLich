@@ -218,22 +218,9 @@ CREATE TABLE IF NOT EXISTS ai_chat_logs (
     KEY idx_chat_time (created_at)
 ) ENGINE = InnoDB;
 
--- Vector của trợ lý AI (lưu dạng nhị phân; tìm kiếm chạy trong bộ nhớ) và bộ nhớ đệm embedding
-CREATE TABLE IF NOT EXISTS ai_vectors (
-    id         VARCHAR(190) NOT NULL,
-    kind       VARCHAR(20)  NOT NULL,                             -- tour / overview / doc
-    tour_id    BIGINT       NULL,
-    content    MEDIUMTEXT   NOT NULL,
-    metadata   TEXT         NULL,
-    embedding  MEDIUMBLOB   NOT NULL,                             -- float32 big-endian
-    dims       INT          NOT NULL,
-    model      VARCHAR(100) NOT NULL,
-    updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    KEY idx_ai_vectors_tour (tour_id),
-    KEY idx_ai_vectors_kind (kind)
-) ENGINE = InnoDB;
-
+-- Vector của trợ lý AI nằm trong bảng vector_store (cột kiểu VECTOR, cần MariaDB 11.7+). Bảng này KHÔNG tạo ở đây:
+-- MariaDBVectorStore của Spring AI tự tạo khi backend khởi động (xem VectorStoreConfiguration).
+-- Bộ nhớ đệm embedding (để khỏi gọi lại API Gemini cho cùng một nội dung):
 CREATE TABLE IF NOT EXISTS ai_embedding_cache (
     hash       CHAR(64)     NOT NULL,                             -- SHA-256(mô hình + nội dung)
     namespace  VARCHAR(100) NOT NULL,

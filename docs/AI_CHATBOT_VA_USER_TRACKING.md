@@ -39,7 +39,7 @@ Tài liệu này giải thích **đã làm gì, vì sao làm vậy, và dùng th
 
 Vì sao RAG chứ không "dạy" (fine-tune) AI: dữ liệu tour đổi liên tục (giá, chỗ, ngày đi). Với RAG chỉ cần cập nhật chỉ mục, không phải huấn luyện lại, và câu trả lời bám sát dữ liệu thật nên ít bịa hơn.
 
-**Spring AI** cung cấp các interface chung (`EmbeddingModel`, `ChatModel`/`ChatClient`, `VectorStore`, `Document`, `TokenTextSplitter`), nên đổi nhà cung cấp (Gemini sang OpenAI, SimpleVectorStore sang PGvector...) chủ yếu là đổi dependency và cấu hình.
+**Spring AI** cung cấp các interface chung (`EmbeddingModel`, `ChatModel`/`ChatClient`, `VectorStore`, `Document`, `TokenTextSplitter`), nên đổi nhà cung cấp (Gemini sang OpenAI, MariaDBVectorStore sang PGvector...) chủ yếu là đổi dependency và cấu hình.
 
 ---
 
@@ -50,19 +50,24 @@ Vì sao RAG chứ không "dạy" (fine-tune) AI: dữ liệu tour đổi liên t
 - **Spring AI 1.1.8.** Đây là bản 1.x mới nhất. Bản 2.x yêu cầu Spring Boot 4 trong khi project dùng Boot 3.5.7.
 - `spring-ai-starter-model-google-genai`: chat (Gemini).
 - `spring-ai-starter-model-google-genai-embedding`: embedding (Gemini).
-- `spring-ai-vector-store`: `SimpleVectorStore`.
+- `spring-ai-vector-store`: interface `VectorStore` (kèm `SimpleVectorStore`, chỉ dùng trong test).
+- `spring-ai-mariadb-store`: `MariaDBVectorStore`, vector store chính thức của Spring AI cho MariaDB.
 
-### 2.2 Chọn vector store: `SimpleVectorStore`
+### 2.2 Chọn vector store: `MariaDBVectorStore`
 
-MariaDB của bạn là 11.6.2, **chưa có kiểu `VECTOR`** (từ 11.7) và Spring AI chưa có starter cho MariaDB. `SimpleVectorStore` lưu trong bộ nhớ và ghi ra file JSON (`backend/data/ai/vector-store.json`), không cần cài thêm dịch vụ nào. Với khoảng vài trăm đoạn như hiện tại là đủ nhanh.
+Dùng luôn vector store chính thức của Spring AI cho MariaDB, không tự viết phần lưu và tìm kiếm vector. Chỉ cần khai báo một bean (`VectorStoreConfiguration`), store tự tạo bảng `vector_store` gồm `id` (UUID), `content`, `metadata` (JSON) và `embedding` kiểu **`VECTOR(768)`** có chỉ mục vector, rồi tìm kiếm ngay trong database bằng độ đo cosine (`VEC_DISTANCE_COSINE`). Metadata (`type`, `tourId`...) được lọc bằng `JSON_VALUE`.
 
-Khi dữ liệu lớn hơn (hàng chục nghìn đoạn) hoặc chạy nhiều máy chủ, đổi sang PGvector, Qdrant hoặc Chroma. Mã của project chỉ phụ thuộc interface `VectorStore` nên chỉ cần sửa chỗ dựng store trong `KnowledgeBase`.
+Kiểu `VECTOR` có từ MariaDB 11.7; hệ thống chạy MariaDB 12.3 (LTS). Vì cột `id` là UUID nên mỗi đoạn được đặt id UUID cố định suy ra từ khóa dễ đọc như `tour:5:head` (`KnowledgeBase.docId`). Số chiều 768 lấy từ `app.ai.embedding-dimensions`; đổi số chiều thì phải xóa bảng `vector_store` để được tạo lại.
+
+Khi dữ liệu lớn hơn nhiều hoặc đổi database, chỉ cần đổi bean trong `VectorStoreConfiguration` (PGvector, Qdrant, Chroma...), vì `KnowledgeBase` chỉ phụ thuộc interface `VectorStore`. Trong test, `SimpleVectorStore` đóng vai store thay cho MariaDB.
 
 ### 2.3 Các thành phần (package `com.tourdulich.ai`)
 
 | Lớp | Vai trò |
 |---|---|
-| `KnowledgeBase` | **Indexing.** Dựng tài liệu từ tour và file tri thức, cắt đoạn, embed, lưu vector. Tự cập nhật khi admin sửa tour |
+| `KnowledgeDocuments` | **Dựng tài liệu cho AI đọc.** Biến tour và file tri thức thành các đoạn kèm metadata (chưa biết gì về vector) |
+| `KnowledgeBase` | **Indexing + Retrieval.** Đưa các đoạn vào `VectorStore` (Spring AI tự embed và lưu), tìm đoạn gần nghĩa với câu hỏi. Tự cập nhật khi admin sửa tour |
+| `VectorStoreConfiguration` | Dựng `MariaDBVectorStore` của Spring AI (bảng `vector_store`) |
 | `ChatService` | **Retrieval + Generation.** Tìm đoạn liên quan, dựng prompt, gọi Gemini, tách tour được nhắc để trả về thẻ tour |
 | `AiController` | `GET /api/ai/status`, `POST /api/ai/chat` (công khai) |
 | `AiAdminController` | `GET /api/admin/ai/status`, `POST /api/admin/ai/reindex` (chỉ admin) |
@@ -71,7 +76,7 @@ Khi dữ liệu lớn hơn (hàng chục nghìn đoạn) hoặc chạy nhiều m
 
 ### 2.4 Luồng lập chỉ mục (Indexing)
 
-Khởi động ứng dụng thì `KnowledgeBase` nạp file vector đã lưu. Nếu chưa có file thì lập chỉ mục ở một luồng nền, không chặn việc khởi động.
+Khởi động ứng dụng thì `KnowledgeBase` đồng bộ chỉ mục ở một luồng nền, không chặn việc khởi động. Đoạn nào đã embed rồi lấy từ bộ nhớ đệm nên gần như miễn phí; việc thay chỉ mục (xóa cũ, thêm mới) diễn ra trong một giao dịch ngắn nên chat không thấy chỉ mục dở dang.
 
 **Từ mỗi tour** (đang mở bán) tạo 3 loại đoạn, mỗi đoạn đều bắt đầu bằng `[Tour: <tên>]` để đứng riêng vẫn rõ là của tour nào:
 1. **Thẻ tổng quan:** tên, mã, trong nước hay nước ngoài, danh mục, điểm đến, nơi đi, thời lượng, phương tiện, giá, mô tả, đường dẫn `/tours/<id>`.
@@ -80,7 +85,7 @@ Khởi động ứng dụng thì `KnowledgeBase` nạp file vector đã lưu. N�
 
 **Từ tài liệu tri thức** (`.md`/`.txt`): cắt theo tiêu đề `#`/`##`, rồi cắt tiếp theo độ dài. Mỗi đoạn mang nhãn `[Tài liệu: <tên> > <mục>]`.
 
-Cắt đoạn bằng `TokenTextSplitter`, mỗi đoạn tối đa khoảng 400 token. Metadata gồm `type` (`tour`/`doc`), `tourId`, `title`. `tourId` lưu dạng chuỗi để lọc chính xác sau khi nạp lại từ file JSON.
+Cắt đoạn bằng `TokenTextSplitter`, mỗi đoạn tối đa khoảng 400 token. Metadata gồm `type` (`tour`/`doc`), `tourId`, `title`. `tourId` lưu dạng chuỗi để lọc chính xác bằng `JSON_VALUE` trong MariaDB.
 
 **Giữ chỉ mục luôn mới:** `AdminTourService` phát `TourChangedEvent`, `KnowledgeBase` lắng nghe sau khi giao dịch commit (`@TransactionalEventListener`), xóa các đoạn cũ của tour đó (lọc theo `tourId`) rồi thêm lại. Tour bị đóng hoặc xóa thì chỉ xóa.
 
@@ -140,13 +145,13 @@ Số liệu đo trên dữ liệu hiện tại (46 tour, 7 tài liệu):
 
 | Nguồn | Token ước tính | Khi nào xảy ra |
 |---|---|---|
-| Embed toàn bộ chỉ mục (447 đoạn: 371 đoạn tour, 40 tổng quan, 36 tài liệu) | ≈ 170.000 | **Một lần** (đã lưu ra đĩa) |
+| Embed toàn bộ chỉ mục (447 đoạn: 371 đoạn tour, 40 tổng quan, 36 tài liệu) | ≈ 170.000 | **Một lần** (đã lưu trong DB) |
 | Sửa một tour | ≈ 2.500 với bộ nhớ đệm (trước đó ≈ 15.000) | Mỗi lần admin sửa tour |
 | Mỗi câu hỏi của khách | ≈ 5.000–7.000 token đầu vào | Mỗi lượt chat (đây là chi phí chạy thường xuyên lớn nhất) |
 
 Đã làm để tiết kiệm:
-- **Lưu chỉ mục ra đĩa** (`data/ai/vector-store.json`): khởi động lại chỉ nạp file, không gọi API.
-- **Bộ nhớ đệm embedding** (`CachingEmbeddingModel`, file `data/ai/embedding-cache.json`): cùng một nội dung chỉ embed một lần, khóa theo nội dung và mô hình. Lập lại toàn bộ chỉ mục thử thật mất 0,6 giây và 0 lần gọi API. Lần đầu tự nạp sẵn vector từ chỉ mục cũ. Câu hỏi giống hệt nhau cũng được nhớ trong bộ nhớ (200 câu gần nhất).
+- **Vector lưu trong MariaDB** (bảng `vector_store`): khởi động lại chỉ đồng bộ lại chỉ mục ở nền, đoạn nào đã embed rồi thì không gọi API.
+- **Bộ nhớ đệm embedding** (`CachingEmbeddingModel`, bảng `ai_embedding_cache`): cùng một nội dung chỉ embed một lần, khóa theo nội dung và mô hình. Lập lại toàn bộ chỉ mục thử thật mất chưa tới 1 giây và 0 lần gọi API. Câu hỏi giống hệt nhau cũng được nhớ trong bộ nhớ (200 câu gần nhất).
 - **Cập nhật theo từng tour** khi admin sửa, không dựng lại toàn bộ.
 - **Điều tiết tốc độ** chỉ áp dụng khi có gọi API thật.
 
@@ -222,7 +227,7 @@ Nút tròn góc phải dưới, mở khung chat:
 Backend tự đọc `.env` (cấu hình `spring.config.import` trong `application.yml`), không cần plugin IDE.
 
 Tên mô hình mặc định (đổi bằng biến môi trường nếu Google đổi tên hoặc ngừng hỗ trợ):
-- `GEMINI_CHAT_MODEL` mặc định `gemini-2.5-flash`.
+- `GEMINI_CHAT_MODEL` mặc định `gemini-3.5-flash`.
 - `GEMINI_EMBEDDING_MODEL` mặc định `gemini-embedding-001` (768 chiều).
 
 ---
@@ -269,12 +274,13 @@ Cách viết để AI trả lời tốt:
 
 | Kiểm thử | Kết quả |
 |---|---|
-| Unit test `KnowledgeBaseTest` (embedding giả): dựng đoạn tour, tài liệu tổng quan, cắt tài liệu, lập chỉ mục, tìm kiếm, lọc theo tour, xóa khi tour bị gỡ, lưu file | 5/5 đạt |
+| Unit test `KnowledgeDocumentsTest` (dựng đoạn tour, tài liệu tổng quan, cắt tài liệu, id UUID) và `KnowledgeBaseTest` (lập chỉ mục, thay chỉ mục cũ, tìm kiếm, lọc theo tour, xóa khi tour bị gỡ), dùng embedding giả và `SimpleVectorStore` | 7/7 đạt |
+| `MariaDBVectorStore` thật trên MariaDB 12.3 (database tạm): tự tạo bảng `vector_store`, lập chỉ mục, tìm kiếm, lọc theo tour, ngưỡng, lập lại không nhân đôi, hoàn tác khi lỗi giữa chừng | Đạt (kiểm một lần, không nằm trong bộ test) |
 | Unit test mốc thời gian Dashboard | 3/3 đạt |
 | App khởi động khi chưa có key; chat trả 503 thân thiện; tracking trả 204/400 đúng; admin summary; reindex khi AI tắt trả 503 | Đạt |
 | **Gemini thật** (key của bạn): lập chỉ mục 447 đoạn, hỏi 5 câu (tour Nhật, đi biển dưới 8 triệu, hủy đơn, thời tiết/giá vàng, đòi lộ system prompt) | Đạt: đúng dữ liệu, kèm link và giá; từ chối đúng câu ngoài chủ đề và câu dò prompt |
 | Dự phòng key thật: key đầu là key giả, key thứ hai là key thật | Đạt: chat và embedding tự chuyển sang key thật và trả lời bình thường |
-| `KeyFailoverTest` (12 test): phân loại lỗi, đổi key, hết thời gian nghỉ, mọi key lỗi, lỗi không do key, che key, đọc key từ cấu hình | 12/12 đạt |
+| `KeyFailoverTest` (14 test): phân loại lỗi, đổi key, hết thời gian nghỉ, mọi key lỗi, lỗi không do key, che key, đọc key từ cấu hình | 14/14 đạt |
 | Trình duyệt thật (Chrome headless): banner đồng ý, từ chối thì 0 request, đồng ý thì có đủ sự kiện, khung chat desktop và mobile, markdown, thẻ tour, chống chèn `<script>`, không lỗi console | Đạt |
 | Chất lượng trên tập câu hỏi lớn hơn (chỉ thử 5 câu) | Chưa: nên tự thử thêm và chỉnh `top-k`/ngưỡng nếu cần |
 
@@ -296,11 +302,11 @@ Các unit test dùng embedding giả nên chỉ chứng minh mã của project; 
 ## 9. Danh sách file mới và thay đổi
 
 **Backend**
-- `ai/` gồm `KnowledgeBase`, `ChatService`, `AiController`, `AiAdminController`, `ChatDtos`, `TourChangedEvent`, và phần key dự phòng: `AiKeys`, `KeyRotation`, `FailoverModels`, `AiModelsConfiguration`, `AiKeyRegistry`, và `CachingEmbeddingModel` (bộ nhớ đệm embedding).
+- `ai/` gồm `KnowledgeDocuments`, `KnowledgeBase`, `VectorStoreConfiguration`, `ChatService`, `AiController`, `AiAdminController`, `ChatDtos`, `TourChangedEvent`, phần key dự phòng: `AiKeys`, `KeyRotation`, `FailoverModels`, `AiModelsConfiguration`, `AiKeyRegistry`, và bộ nhớ đệm embedding: `CachingEmbeddingModel`, `EmbeddingCacheStore`, `JdbcEmbeddingCacheStore`.
 - `tracking/` gồm `TrackingService`, `TrackingController`.
 - `resources/ai/knowledge/*.md`, `config/BlankGeminiKeyEnvironmentPostProcessor` (biến key rỗng không làm app sập), `backend/.env.example`.
 - Sửa: `pom.xml`, `application.yml`, `AppProperties`, `SecurityConfig`, `RateLimitInterceptor`, `AdminTourService`, `SchemaMigrator`, `TourRepository`.
-- Test: `KnowledgeBaseTest`, `KeyFailoverTest`, `DashboardPeriodTest`.
+- Test: `KnowledgeDocumentsTest`, `KnowledgeBaseTest`, `CachingEmbeddingModelTest`, `JdbcEmbeddingCacheStoreTest`, `KeyFailoverTest`, `DashboardPeriodTest`.
 
 **Frontend**
 - `tracking/tracker.js`, `components/ChatWidget.jsx`, `ChatMarkdown.jsx`, `TrackingConsent.jsx`, `styles/chat.css`.

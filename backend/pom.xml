@@ -107,7 +107,7 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- AI chatbot (RAG): Gemini làm mô hình chat + embedding, SimpleVectorStore lưu vector -->
+        <!-- AI chatbot (RAG): Gemini làm mô hình chat + embedding, MariaDBVectorStore (cần MariaDB 11.7+) lưu và tìm vector -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-google-genai</artifactId>
@@ -119,6 +119,10 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-vector-store</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-mariadb-store</artifactId>
         </dependency>
     </dependencies>
 

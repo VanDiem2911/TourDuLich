@@ -249,13 +249,28 @@ class KeyFailoverTest {
         AiKeyRegistry registry = new AiKeyRegistry();
         AiModelsConfiguration cfg = new AiModelsConfiguration();
         ChatModel chat = cfg.aiChatModel(env, registry);
-        EmbeddingModel embedding = cfg.aiEmbeddingModel(env, registry, new InMemoryAiStores());
+        EmbeddingModel embedding = cfg.aiEmbeddingModel(env, registry, new InMemoryEmbeddingCacheStore());
         assertInstanceOf(FailoverModels.Chat.class, chat);
         assertInstanceOf(CachingEmbeddingModel.class, embedding); // bọc ngoài mô hình có dự phòng key để đệm vector
         assertEquals(768, embedding.dimensions());
         @SuppressWarnings("unchecked")
         java.util.Map<String, Object> chatInfo = (java.util.Map<String, Object>) registry.snapshot().get("chat");
-        assertEquals(4, chatInfo.get("keyCount"), "2 key x 2 mô hình chat mặc định = 4 đường dự phòng");
+        assertEquals(2, chatInfo.get("keyCount"), "2 key x 1 mô hình chat mặc định (gemini-3.5-flash) = 2 đường dự phòng");
         assertTrue(registry.snapshot().containsKey("embedding"));
+    }
+
+    @Test
+    void explicitChatModelListMultipliesWithKeys() {
+        MockEnvironment env = new MockEnvironment()
+                .withProperty("GEMINI_API_KEY", "key-primary-0001")
+                .withProperty("GEMINI_API_KEY_2", "key-backup-0002")
+                .withProperty("GEMINI_CHAT_MODEL", "gemini-3.5-flash,gemini-2.5-flash");
+        assertEquals(List.of("gemini-3.5-flash", "gemini-2.5-flash"), AiModelsConfiguration.chatModels(env));
+        AiKeyRegistry registry = new AiKeyRegistry();
+        new AiModelsConfiguration().aiChatModel(env, registry);
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> chatInfo = (java.util.Map<String, Object>) registry.snapshot().get("chat");
+        assertEquals(4, chatInfo.get("keyCount"), "2 key x 2 mô hình khai báo rõ = 4 đường dự phòng");
+        assertEquals(List.of("gemini-3.5-flash"), AiModelsConfiguration.chatModels(new MockEnvironment()));
     }
 }

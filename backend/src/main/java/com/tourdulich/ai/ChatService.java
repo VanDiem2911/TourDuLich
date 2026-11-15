@@ -224,11 +224,11 @@ public class ChatService {
 
     private static String live(Tour t) {
         StringBuilder sb = new StringBuilder();
-        sb.append("giá người lớn ").append(KnowledgeBase.vnd(t.effectiveAdultPrice().longValue()));
+        sb.append("giá người lớn ").append(KnowledgeDocuments.vnd(t.effectiveAdultPrice().longValue()));
         if (t.hasPromo()) {
-            sb.append(" (khuyến mãi, giá gốc ").append(KnowledgeBase.vnd(t.getAdultPrice().longValue())).append(')');
+            sb.append(" (khuyến mãi, giá gốc ").append(KnowledgeDocuments.vnd(t.getAdultPrice().longValue())).append(')');
         }
-        sb.append(", giá trẻ em ").append(KnowledgeBase.vnd(TourMapper.effectiveChildPrice(t).longValue()));
+        sb.append(", giá trẻ em ").append(KnowledgeDocuments.vnd(TourMapper.effectiveChildPrice(t).longValue()));
         if (t.getDepartureDate() != null) {
             sb.append(", khởi hành ").append(t.getDepartureDate().format(DATE));
         }
@@ -268,8 +268,8 @@ public class ChatService {
     /** Id tour của một đoạn: đoạn của một tour (tourId) hoặc tài liệu tổng quan nhắc nhiều tour (tourIds, tối đa 8). */
     private static List<Long> tourIdsOf(Document d) {
         List<Long> out = new ArrayList<>();
-        Object one = d.getMetadata().get(KnowledgeBase.META_TOUR_ID);
-        Object many = d.getMetadata().get(KnowledgeBase.META_TOUR_IDS);
+        Object one = d.getMetadata().get(KnowledgeDocuments.META_TOUR_ID);
+        Object many = d.getMetadata().get(KnowledgeDocuments.META_TOUR_IDS);
         try {
             if (one != null) {
                 out.add(Long.valueOf(String.valueOf(one)));
