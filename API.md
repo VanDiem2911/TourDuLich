@@ -46,7 +46,7 @@ Cart:
 | PUT | /api/bookings/{id}/cancel | `{reason}` chỉ khi PENDING và của mình; hoàn lại chỗ; nếu đã PAID thì paymentStatus -> REFUNDED |
 | GET | /api/bookings/{id}/payment-info | `{bookingId,bookingCode,amount,paymentCode,bankName,accountNumber,accountName,transferContent,qrUrl,paymentStatus,bookingStatus,paidAt,simulateEnabled}`; `qrUrl` = `https://img.vietqr.io/image/{bank}-{account}-compact2.png?amount=..&addInfo=..&accountName=..`; cấu hình ngân hàng trong `app.payment.*` |
 | POST | /api/payments/simulate | `{bookingId}` chỉ chạy khi `app.payment.simulate-enabled=true` (mặc định true ở dev): đánh dấu PAID (+ghi payment_transactions). Dùng để demo |
-| POST | /api/payments/webhook | công khai nhưng bắt header `Authorization: Apikey <app.payment.webhook-key>`; payload kiểu SePay `{id,gateway,transferAmount,content,accountNumber,transactionDate}`; khớp `paymentCode` trong content; chống trùng theo `id` |
+| POST | /api/payments/webhook | công khai nhưng bắt header `Authorization: Apikey <app.payment.webhook-key>`; payload kiểu SePay `{id,gateway,transferAmount,content,accountNumber,transactionDate,transferType}`; bỏ qua giao dịch `transferType=out`; khớp `paymentCode` trong content; chống trùng theo `id`; phản hồi luôn đúng `{"success":true}` (SePay yêu cầu), kết quả đối soát nằm trong `payment_transactions` |
 
 BookingSummary: `{id,bookingCode,createdAt,totalAmount,paymentStatus,bookingStatus,itemCount,firstTourName,firstTourImage}` (admin có thêm `customerName,customerEmail`)
 

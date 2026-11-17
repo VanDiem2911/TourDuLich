@@ -28,10 +28,12 @@ public class PaymentController {
 
     /** Webhook ngân hàng kiểu SePay: công khai nhưng bắt buộc header "Authorization: Apikey <khóa>". */
     @PostMapping("/webhook")
-    public Map<String, Object> webhook(@RequestHeader(value = "Authorization", required = false) String authorization,
-                                       @RequestBody WebhookPayload payload) {
+    public Map<String, Boolean> webhook(@RequestHeader(value = "Authorization", required = false) String authorization,
+                                        @RequestBody WebhookPayload payload) {
         paymentService.verifyWebhookKey(authorization);
-        PaymentService.WebhookResult result = paymentService.handleWebhook(payload);
-        return Map.of("success", result.success(), "status", result.status());
+        paymentService.handleWebhook(payload);
+        // SePay chỉ coi là thành công khi nhận HTTP 200/201 với body đúng {"success": true} (không thêm trường khác).
+        // Kết quả đối soát chi tiết đã được ghi vào payment_transactions và log.
+        return Map.of("success", true);
     }
 }
