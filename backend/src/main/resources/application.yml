@@ -1,5 +1,7 @@
 server:
-  port: 8080
+  port: ${PORT:8080} # Render (và các PaaS khác) truyền cổng qua biến PORT
+  # Đứng sau reverse proxy HTTPS của nền tảng: tin các header X-Forwarded-* để biết request gốc là https
+  forward-headers-strategy: framework
   servlet:
     session:
       timeout: 30m # HTTP Session dùng cho giỏ tour (Session Cart)
@@ -19,7 +21,8 @@ spring:
     # Xác thực hoàn toàn bằng JWT + bảng users, không dùng user in-memory (mật khẩu tạm) của Spring Boot
     exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
-    url: jdbc:mariadb://localhost:3306/tourdulich
+    # Triển khai thật: đặt DB_URL, ví dụ jdbc:mariadb://host:3306/tourdulich (thêm ?sslMode=trust nếu nhà cung cấp bắt TLS)
+    url: ${DB_URL:jdbc:mariadb://localhost:3306/tourdulich}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:sapassword}
   jpa:
@@ -76,8 +79,8 @@ app:
     max-history: 8
     max-message-chars: 1000
   cors:
-    allowed-origins:
-      - http://localhost:5173
+    # Nhiều origin cách nhau bằng dấu phẩy, ví dụ CORS_ALLOWED_ORIGINS=https://tourdulich.vercel.app,http://localhost:5173
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   jwt:
     # Tối thiểu 32 ký tự. PHẢI đổi qua biến môi trường JWT_SECRET khi triển khai thật.
     secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}

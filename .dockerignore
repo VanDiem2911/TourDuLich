@@ -1,0 +1,12 @@
+# Context build lấy từ thư mục gốc repo: loại những thứ nặng hoặc chứa bí mật
+.git
+**/node_modules
+**/target
+frontend
+docs
+database
+**/.env
+**/.env.*
+!**/.env.example
+backend/uploads
+backend/data

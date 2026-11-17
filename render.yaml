@@ -1,0 +1,53 @@
+# Render Blueprint cho BACKEND (Spring Boot). Frontend đã deploy riêng nên không có trong file này.
+# Dùng: Render Dashboard > New > Blueprint > chọn repo này. Render sẽ hỏi giá trị các biến "sync: false".
+# Lưu ý: Render không có MariaDB managed. Cần một MariaDB 11.7+ (có kiểu VECTOR) ở nơi khác, điền vào DB_URL.
+services:
+  - type: web
+    name: tourdulich-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    region: singapore # gần Việt Nam nhất; nên cùng vùng với database
+    plan: free # free: ngủ sau ~15 phút không có request (lần gọi đầu mất cỡ 1 phút). Đổi sang starter nếu cần chạy liên tục
+    healthCheckPath: /api/health
+    autoDeploy: true # tự deploy khi push lên nhánh đang theo dõi
+    envVars:
+      # ----- Cơ sở dữ liệu -----
+      - key: DB_URL # ví dụ jdbc:mariadb://host:3306/tourdulich (thêm ?sslMode=trust nếu nhà cung cấp bắt TLS)
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      # ----- Bảo mật -----
+      - key: JWT_SECRET # Render tự sinh chuỗi ngẫu nhiên dài, không cần tự đặt
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      # Địa chỉ frontend đã deploy, ví dụ https://tourdulich.vercel.app (nhiều địa chỉ cách nhau bằng dấu phẩy)
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      # ----- Dữ liệu mẫu: tắt khi chạy thật -----
+      - key: SEED_DEMO_DATA
+        value: "false"
+      # ----- Thanh toán chuyển khoản QR (điền trên dashboard, không ghi vào repo) -----
+      - key: PAYMENT_BANK_NAME
+        sync: false
+      - key: PAYMENT_BANK_CODE
+        sync: false
+      - key: PAYMENT_ACCOUNT_NUMBER
+        sync: false
+      - key: PAYMENT_ACCOUNT_NAME
+        sync: false
+      - key: PAYMENT_WEBHOOK_KEY # cùng giá trị với API Key khai trong webhook SePay
+        sync: false
+      - key: PAYMENT_SIMULATE_ENABLED # true: hiện nút thanh toán giả lập (chỉ để demo); false khi chạy thật
+        sync: false
+      # ----- Trợ lý AI (Gemini) -----
+      - key: GEMINI_API_KEY
+        sync: false
+      # ----- Email: để tắt, chỉ ghi log. Muốn gửi thật thì thêm MAIL_HOST/PORT/USERNAME/PASSWORD/FROM trên dashboard -----
+      - key: MAIL_ENABLED
+        value: "false"
