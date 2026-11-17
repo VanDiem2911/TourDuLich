@@ -145,6 +145,11 @@ public class PaymentService {
         if (payload.id().length() > 100) {
             throw ApiException.badRequest("Mã giao dịch quá dài");
         }
+        if ("out".equalsIgnoreCase(payload.transferType())) {
+            // Tiền chuyển ra khỏi tài khoản (transferAmount vẫn dương) không bao giờ là thanh toán của khách
+            log.info("Webhook {}: bỏ qua giao dịch tiền ra", payload.id());
+            return new WebhookResult(true, "IGNORED_OUTGOING");
+        }
         if (transactionRepository.existsByTransactionRef(payload.id())) {
             return new WebhookResult(true, "DUPLICATE");
         }
