@@ -59,6 +59,7 @@ export default function Cart() {
     }
   }
 
+  //Đặt tour thì bắt buộc phải dăng nhập, chưa đăng nhập thì chuyển sang trang đăng nhập rồi quay lại
   const goCheckout = () => {
     if (!isAuthenticated) navigate('/login', { state: { from: '/checkout' } })
     else navigate('/checkout')
