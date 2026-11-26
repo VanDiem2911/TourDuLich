@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { bookingApi } from '../api'
 import { getErrorMessage, getFieldErrors } from '../api/client'
@@ -26,9 +26,11 @@ export default function Checkout() {
   const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  // Đặt tour xong thì giỏ trống là bình thường: không đẩy về /cart, để chuyển sang trang thanh toán
+  const placed = useRef(false)
 
   if (loading) return <div className="container page"><div className="skeleton" style={{ height: 240 }} /></div>
-  if (cart.items.length === 0) return <Navigate to="/cart" replace />
+  if (cart.items.length === 0 && !placed.current) return <Navigate to="/cart" replace />
 
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
 
@@ -54,8 +56,10 @@ export default function Checkout() {
         contactEmail: form.contactEmail.trim(),
         specialRequest: form.specialRequest.trim() || null,
       })
-      await refresh()
-      navigate(`/booking-success/${booking.id}`, { replace: true })
+      placed.current = true
+      // Chuyển thẳng sang trang thanh toán QR của đơn vừa tạo, rồi mới làm mới giỏ (đã trống)
+      navigate(`/payment/${booking.id}`, { replace: true })
+      refresh()
     } catch (err) {
       setErrors(getFieldErrors(err))
       setError(getErrorMessage(err, 'Đặt tour thất bại, vui lòng thử lại!'))
